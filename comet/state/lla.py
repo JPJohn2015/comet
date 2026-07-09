@@ -138,7 +138,7 @@ class LLA:
     def __eq__(self, other) -> bool:
         """Override Equality operator."""
         # Error checking
-        if not isinstance(other, LLA):
+        if not isinstance(other, LLA | list | np.ndarray):
             raise NotImplementedError(f"Comparison is not defined for {type(other)}")
 
         # Compare LLA coordinates

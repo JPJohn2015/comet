@@ -105,6 +105,14 @@ class Timeline:
             stop (Epoch, optional): New stop Epoch. Defaults to None.
             step (Duration, optional): New step Duration. Defaults to None.
         """
+        # Use existing values if None provided
+        if start is None:
+            start = self.start
+        if stop is None:
+            stop = self.stop
+        if step is None:
+            step = self.step
+
         # Error Checking
         if start >= stop:
             raise ValueError("Timeline(): stop Epoch must be before start Epoch")

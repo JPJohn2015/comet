@@ -81,3 +81,6 @@ Thumbs.db
 # Secrets / local config
 *.local
 secrets.json
+
+# Claude
+claude.md

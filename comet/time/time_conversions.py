@@ -92,10 +92,10 @@ def date_round(ymdhms: np.ndarray) -> np.ndarray:
         ymdhms[2] += 1
 
     # Increment months
-    if (ymdhms[1] == [1, 3, 5, 7, 8, 10, 12]) and (ymdhms[2] == 32):
+    if (ymdhms[1] in [1, 3, 5, 7, 8, 10, 12]) and (ymdhms[2] == 32):
         ymdhms[2] = 1
         ymdhms[1] += 1
-    if (ymdhms[1] == [4, 6, 9, 11]) and (ymdhms[2] == 31):
+    if (ymdhms[1] in [4, 6, 9, 11]) and (ymdhms[2] == 31):
         ymdhms[2] = 1
         ymdhms[1] += 1
     if (ymdhms[1] == 2) and (ymdhms[2] == 29) and (isleap(ymdhms[0]) == False):

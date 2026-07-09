@@ -26,11 +26,11 @@ def rot_eci_to_ecef(epoch: npt.ArrayLike):
     rot = np.zeros((len(epoch), 3, 3))
     for i in range(0, len(epoch)):
         # Calculate Rotation Matricies
-        rot_pm = polar_motion(epoch)
-        rot_era = earth_rotation(epoch)
-        rot_pn = precession_nutation(epoch)
+        rot_pm = polar_motion(epoch[i])
+        rot_era = earth_rotation(epoch[i])
+        rot_pn = precession_nutation(epoch[i])
 
-        rot[i, ...] = np.matmul(rot_pn, np.matmul(rot_era, rot_pm))
+        rot[i, ...] = np.matmul(rot_pm, np.matmul(rot_era, rot_pn))
 
     return rot
 
@@ -50,11 +50,11 @@ def rot_ecef_to_eci(epoch: Epoch):
     rot = np.zeros((len(epoch), 3, 3))
     for i in range(0, len(epoch)):
         # Calculate Rotation Matricies
-        rot_pm = polar_motion(epoch)
-        rot_era = earth_rotation(epoch)
-        rot_pn = precession_nutation(epoch)
+        rot_pm = polar_motion(epoch[i])
+        rot_era = earth_rotation(epoch[i])
+        rot_pn = precession_nutation(epoch[i])
 
-        rot[i, ...] = np.matmul(rot_pm.T, np.matmul(rot_era.T, rot_pn.T))
+        rot[i, ...] = np.matmul(rot_pn.T, np.matmul(rot_era.T, rot_pm.T))
 
     return rot
 
@@ -83,16 +83,16 @@ def eci_to_ecef(epoch: npt.ArrayLike, state: npt.ArrayLike):
         rot_pn = precession_nutation(epoch[i])
 
         # Calculate ECEF positions
-        ecef_pos = np.matmul(rot_pn, np.matmul(rot_era, np.matmul(rot_pm, state[i, 0:3])))
+        ecef_pos = np.matmul(rot_pm, np.matmul(rot_era, np.matmul(rot_pn, state[i, 0:3])))
         if len(state[i, :]) == 6:
             ecef_vel = np.matmul(
-                rot_pn,
+                rot_pm,
                 np.matmul(
                     rot_era,
                     np.matmul(
-                        rot_pm,
+                        rot_pn,
                         state[i, 3:6]
-                        + np.cross([0, 0, c.OMEGA_EARTH], np.matmul(rot_pm, state[i, 0:3])),
+                        - np.cross([0, 0, c.OMEGA_EARTH], np.matmul(rot_pn, state[i, 0:3])),
                     ),
                 ),
             )
@@ -126,14 +126,14 @@ def ecef_to_eci(epoch: npt.ArrayLike, state: npt.ArrayLike):
         rot_era = earth_rotation(epoch[i])
         rot_pn = precession_nutation(epoch[i])
 
-        # Calculate ECEF positions
-        eci_pos = np.matmul(rot_pm.T, np.matmul(rot_era.T, np.matmul(rot_pn.T, state[i, 0:3])))
+        # Calculate ECI positions
+        eci_pos = np.matmul(rot_pn.T, np.matmul(rot_era.T, np.matmul(rot_pm.T, state[i, 0:3])))
         if len(state[i, :]) == 6:
             eci_vel = np.matmul(
-                rot_pm.T,
-                np.matmul(rot_era.T, np.matmul(rot_pn.T, state[i, 3:6]))
-                - np.cross(
-                    [0, 0, c.OMEGA_EARTH], np.matmul(rot_era.T, np.matmul(rot_pn.T, state[i, 0:3]))
+                rot_pn.T,
+                np.matmul(rot_era.T, np.matmul(rot_pm.T, state[i, 3:6]))
+                + np.cross(
+                    [0, 0, c.OMEGA_EARTH], np.matmul(rot_era.T, np.matmul(rot_pm.T, state[i, 0:3]))
                 ),
             )
             eci_state[i, :] = np.append(eci_pos, eci_vel)

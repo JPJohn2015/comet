@@ -98,8 +98,15 @@ class TLE:
             epoch (Epoch): TLE Epoch.
         """
         # Calculate Julian Date and convert to Epoch
-        jd_year_start = ymdhms_to_jd(2000 + self.year(), 1, 1, 0, 0, 0.0)
-        jd = jd_year_start + self.day_of_year()
+        # TLE years are 2-digit: 57-99 = 1957-1999, 00-56 = 2000-2056
+        two_digit_year = self.year()
+        if two_digit_year >= 57:
+            full_year = 1900 + two_digit_year
+        else:
+            full_year = 2000 + two_digit_year
+
+        jd_year_start = ymdhms_to_jd(full_year, 1, 1, 0, 0, 0.0)
+        jd = jd_year_start + self.day_of_year() - 1
         return Epoch(jd)
 
     def inclination(self) -> float:
@@ -148,7 +155,7 @@ class TLE:
         Returns:
             ta (float): TLE True Anomaly in rad.
         """
-        return mean_to_true_anomaly(np.deg2rad(self.mean_anomaly()), self.eccentricity())
+        return mean_to_true_anomaly(self.mean_anomaly(), self.eccentricity())
 
     def eccentric_anomaly(self) -> float:
         """Returns the TLE Eccentric Anomaly in rad.
@@ -156,7 +163,7 @@ class TLE:
         Returns:
             ea (float): TLE Eccentric Anomaly in rad.
         """
-        return mean_to_eccentric_anomaly(np.deg2rad(self.mean_anomaly()), self.eccentricity())
+        return mean_to_eccentric_anomaly(self.mean_anomaly(), self.eccentricity())
 
     def mean_motion(self) -> float:
         """Returns the TLE Mean Motion in rad/s.

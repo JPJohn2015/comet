@@ -32,16 +32,13 @@ class LLA:
         """
         # Construct Class
         if len(args) == 3:
-            # 3 individual components for Position and Velocity
+            # 3 individual components for Latitude, Longitude, and Altitude
             if not np.all([isinstance(arg, int | float | np.int64 | np.float64) for arg in args]):
                 raise TypeError("LLA(): values must be an integer or float when providing 3 inputs")
-            self.lat = args[0]
-            self.long = args[1]
-            self.alt = args[2]
-            self._raw = np.array([self.lat, self.long, self.alt])
+            self._raw = np.array([args[0], args[1], args[2]])
 
         elif len(args) == 1:
-            # Full State Vector
+            # Full LLA Vector
             if not isinstance(args[0], list | np.ndarray):
                 raise TypeError("LLA(): LLA must be an Array of length 3")
             if len(args[0]) != 3:
@@ -50,10 +47,7 @@ class LLA:
                 [isinstance(arg, int | float | np.int64 | np.float64) for arg in args[0]]
             ):
                 raise TypeError("LLA(): Values inside LLA array must be an integer or float")
-            self.lat = args[0][0]
-            self.long = args[0][1]
-            self.alt = args[0][2]
-            self._raw = np.array([self.lat, self.long, self.alt])
+            self._raw = np.array(args[0])
 
         else:
             raise ValueError("LLA(): Invalid number of inputs")
@@ -64,7 +58,22 @@ class LLA:
         Returns:
             lla: Copy of the LLA.
         """
-        return LLA(self.lat, self.long, self.alt)
+        return LLA(self._raw)
+
+    @property
+    def lat(self) -> float:
+        """Geodetic latitude in deg."""
+        return self._raw[0]
+
+    @property
+    def long(self) -> float:
+        """Geodetic longitude in deg."""
+        return self._raw[1]
+
+    @property
+    def alt(self) -> float:
+        """Geodetic altitude in km."""
+        return self._raw[2]
 
     def get_latitude(self) -> float:
         """Returns the Geodetic Latitude.
@@ -94,22 +103,24 @@ class LLA:
         """Returns the ECEF position of the LLA Coordinates.
 
         Returns:
-            ecef (np.ndarray): ECEF State position in km.
+            ecef (np.ndarray): ECEF position in km.
         """
-        return lla_to_ecef(self._raw)
+        state = lla_to_ecef(self._raw)
+        return state[:3] if state.ndim == 1 else state[:, :3]
 
     def eci_position(self, epoch: npt.ArrayLike) -> np.ndarray:
         """Returns the ECI position at the specified Epoch of the LLA Coordinates.
 
         Returns:
-            eci (np.ndarray): ECI State position in km.
+            eci (np.ndarray): ECI position in km.
         """
         if isinstance(epoch, Epoch):
             lla = self._raw
         else:
             lla = self._raw[np.newaxis, ...].repeat(len(epoch), axis=0)
 
-        return lla_to_eci(epoch, lla)
+        state = lla_to_eci(epoch, lla)
+        return state[:3] if state.ndim == 1 else state[:, :3]
 
     def to_dict(self):
         """Method that creates a dictionary of required inputs for LLA construction.
@@ -135,6 +146,10 @@ class LLA:
 
         return LLA(dict["coordinates"])
 
+    def __hash__(self):
+        """Make LLA hashable for use in sets and as dictionary keys."""
+        return hash(tuple(self._raw))
+
     def __eq__(self, other) -> bool:
         """Override Equality operator."""
         # Error checking
@@ -143,9 +158,9 @@ class LLA:
 
         # Compare LLA coordinates
         if isinstance(other, LLA):
-            return np.all(self._raw == other._raw)
+            return np.allclose(self._raw, other._raw)
         elif isinstance(other, list | np.ndarray):
-            return np.all(self._raw == other)
+            return np.allclose(self._raw, other)
 
     def __ne__(self, other) -> bool:
         """Override Non-Equality operator."""
@@ -158,6 +173,22 @@ class LLA:
             return np.any(self._raw != other._raw)
         elif isinstance(other, list | np.ndarray):
             return np.any(self._raw != other)
+
+    def __lt__(self, other) -> bool:
+        """Override Less Than operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __le__(self, other) -> bool:
+        """Override Less Than or Equal To operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __gt__(self, other) -> bool:
+        """Override Greater Than operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __ge__(self, other) -> bool:
+        """Override Greater Than or Equal To operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
 
     def __getitem__(self, i):
         """Define key indexing for getting components in LLA Coordinates."""

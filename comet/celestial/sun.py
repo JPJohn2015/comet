@@ -28,7 +28,7 @@ class Sun:
         return c.RADIUS_SUN
 
     def get_position(
-        self, epoch: Epoch = Epoch(c.J2000), fidelity: CelestialFidelity = CelestialFidelity.LoFi
+        self, epoch: Epoch | None = None, fidelity: CelestialFidelity = CelestialFidelity.LoFi
     ) -> np.ndarray:
         """Calculates the Solar Position in Mean Equator of Date for a specific Epoch.
 
@@ -37,16 +37,18 @@ class Sun:
             fidelity (CelestialFidelity, optional): Celestial Body calculation Fidelity. Defaults to CelestialFidelity.LoFi.
 
         Returns:
-            sun_position (np.ndarray): Solar Position in km.
+            sun_position (np.ndarray): Solar Position in km (3-element array).
         """
         # Get Julian Date from Epoch
+        if epoch is None:
+            epoch = Epoch(c.J2000)
         jd = epoch.julian_date()
 
         # Get Solar Position using specified Fidelity
         if fidelity == CelestialFidelity.LoFi:
             sun_position = self._sun_position_low_fidelity(jd)
         elif fidelity == CelestialFidelity.HiFi:
-            raise NotImplemented("Sun(): High Fidelity Solar Position not Implemented")
+            raise NotImplementedError("Sun(): High Fidelity Solar Position not Implemented")
         else:
             raise ValueError("Sun(): Invalid CelestialFidelity Enum")
 
@@ -71,22 +73,29 @@ class Sun:
         if fidelity == CelestialFidelity.LoFi:
             sun_position_array = self._sun_position_low_fidelity(jd)
         elif fidelity == CelestialFidelity.HiFi:
-            raise NotImplemented("Sun(): High Fidelity Solar Position not Implemented")
+            raise NotImplementedError("Sun(): High Fidelity Solar Position not Implemented")
         else:
             raise ValueError("Sun(): Invalid CelestialFidelity Enum")
 
         return sun_position_array
 
-    def _sun_position_low_fidelity(self, julian_dates: np.ndarray) -> np.ndarray:
+    def _sun_position_low_fidelity(self, julian_dates: float | np.ndarray) -> np.ndarray:
         """Calculates the Solar Position for a set of Julian Dates.
         This function uses Vallado's Low Fidelity Sun Position Vector Algorithm 29 on pg. 279-280
 
+        Reference: Vallado, "Fundamentals of Astrodynamics and Applications", Algorithm 29, pg. 279-280
+        Accuracy: ~0.01 deg in ecliptic longitude per Vallado
+
         Args:
-            julian_dates (np.ndarray): Array of Julian Dates.
+            julian_dates (float | np.ndarray): Julian Date or array of Julian Dates.
 
         Returns:
-            sun_position (np.ndarray): Nx3 Array of Solar Positions.
+            sun_position (np.ndarray): 3-element or Nx3 Array of Solar Positions in km.
         """
+        # Ensure input is array for vectorized operations
+        julian_dates = np.atleast_1d(julian_dates)
+        is_scalar = julian_dates.shape == (1,)
+
         # Calculate Julian Centuries
         julian_centuries = (julian_dates - c.J2000) / c.JULIAN_CENTURY
 
@@ -119,7 +128,7 @@ class Sun:
         # Scale to km
         sun_position = np.array(sun_position_au).T * c.AU
 
-        return sun_position
+        return np.squeeze(sun_position) if is_scalar else sun_position
 
 
 # Testing

@@ -30,8 +30,8 @@ class Moon:
 
     def get_position(
         self,
-        epoch: Epoch = Epoch(c.J2000),
-        fidelity: str | CelestialFidelity = CelestialFidelity.LoFi,
+        epoch: Epoch | None = None,
+        fidelity: CelestialFidelity = CelestialFidelity.LoFi,
     ) -> np.ndarray:
         """Calculates the Lunar Position in Mean Equator of Date for a specific Epoch.
 
@@ -40,16 +40,18 @@ class Moon:
             fidelity (CelestialFidelity, optional): Celestial Body calculation Fidelity. Defaults to CelestialFidelity.LoFi.
 
         Returns:
-            moon_position (np.ndarray): Lunar Position in km.
+            moon_position (np.ndarray): Lunar Position in km (3-element array).
         """
         # Get Julian Date from Epoch
+        if epoch is None:
+            epoch = Epoch(c.J2000)
         jd = epoch.julian_date()
 
         # Get Lunar Position using specified Fidelity
         if fidelity == CelestialFidelity.LoFi:
             moon_position = self._moon_position_low_fidelity(jd)
         elif fidelity == CelestialFidelity.HiFi:
-            raise NotImplemented("Moon(): High Fidelity Lunar Position not Implemented")
+            raise NotImplementedError("Moon(): High Fidelity Lunar Position not Implemented")
         else:
             raise ValueError("Moon(): Invalid CelestialFidelity Enum")
 
@@ -74,22 +76,29 @@ class Moon:
         if fidelity == CelestialFidelity.LoFi:
             moon_position_array = self._moon_position_low_fidelity(jd)
         elif fidelity == CelestialFidelity.HiFi:
-            raise NotImplemented("Moon(): High Fidelity Lunar Position not Implemented")
+            raise NotImplementedError("Moon(): High Fidelity Lunar Position not Implemented")
         else:
             raise ValueError("Moon(): Invalid CelestialFidelity Enum")
 
         return moon_position_array
 
-    def _moon_position_low_fidelity(self, julian_dates: np.ndarray) -> np.ndarray:
+    def _moon_position_low_fidelity(self, julian_dates: float | np.ndarray) -> np.ndarray:
         """Calculates the Lunar Position for a set of Julian Dates.
         This function uses Vallado's Low Fidelity Moon Position Vector Algorithm 31 on pg. 288
 
+        Reference: Vallado, "Fundamentals of Astrodynamics and Applications", Algorithm 31, pg. 288
+        Accuracy: ~0.3 deg in ecliptic longitude per Vallado
+
         Args:
-            julian_dates (np.ndarray): Array of Julian Dates.
+            julian_dates (float | np.ndarray): Julian Date or array of Julian Dates.
 
         Returns:
-            moon_position (np.ndarray): Nx3 Array of Lunar Positions.
+            moon_position (np.ndarray): 3-element or Nx3 Array of Lunar Positions in km.
         """
+        # Ensure input is array for vectorized operations
+        julian_dates = np.atleast_1d(julian_dates)
+        is_scalar = julian_dates.shape == (1,)
+
         # Calculate Julian Centuries
         julian_centuries = (julian_dates - c.J2000) / c.JULIAN_CENTURY
 
@@ -125,18 +134,19 @@ class Moon:
         )
 
         radius = c.RADIUS_EARTH / np.sin(parallax)
+        # Ecliptic to equatorial coordinate transformation per Vallado Algorithm 31, pg. 288
         moon_position_unit_vector = [
             np.cos(ecliptic_latitude) * np.cos(ecliptic_longitude),
             np.cos(obliquity_ecliptic) * np.cos(ecliptic_latitude) * np.sin(ecliptic_longitude)
             - np.sin(obliquity_ecliptic) * np.sin(ecliptic_latitude),
             np.sin(obliquity_ecliptic) * np.cos(ecliptic_latitude) * np.sin(ecliptic_longitude)
-            - np.cos(obliquity_ecliptic) * np.sin(ecliptic_latitude),
+            + np.cos(obliquity_ecliptic) * np.sin(ecliptic_latitude),
         ]
 
         # Scale to km
-        moon_position = np.array(moon_position_unit_vector * radius).T
+        moon_position = np.array(moon_position_unit_vector).T * radius[:, np.newaxis]
 
-        return moon_position
+        return np.squeeze(moon_position) if is_scalar else moon_position
 
 
 # Testing

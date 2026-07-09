@@ -5,7 +5,7 @@ from enum import Enum
 class CelestialFidelity(Enum):
     """Enum for Fidelity of calculations of Celestial Bodies.
 
-    Integrator options are: LoFi, HiFi
+    CelestialFidelity options are: LoFi, HiFi
     """
 
     # Status Enums

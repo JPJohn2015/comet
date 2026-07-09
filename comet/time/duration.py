@@ -74,9 +74,7 @@ class Duration:
         Returns:
             Duration: Copy of the Duration.
         """
-        return Duration(
-            days=self.days, hours=self.hours, minutes=self.minutes, seconds=self.seconds
-        )
+        return Duration(seconds=self._total_seconds)
 
     def total_days(self) -> float:
         """Returns total number of days in Duration.

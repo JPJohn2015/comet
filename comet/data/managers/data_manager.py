@@ -9,16 +9,12 @@ import certifi
 # comet imports
 from comet.utilities.constants import Constants as c
 
-# --------------------------------------------------------------------------------------------------------------------------   
 class DataManager:
     """Class that Processes, Downloads and Updates data files.
 
     Example Constructions:
         * propagator = Propagator(epoch, state)
     """
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Class Construction
-    # ----------------------------------------------------------------------------------------------------------------------
     def __init__(self):
         # Path to Data Folder
         self._path = Path(__file__).parents[1]
@@ -27,9 +23,6 @@ class DataManager:
         f = open(self._path / 'download_paths.json')
         self._download_paths = json.load(f)
         
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Class Methods
-    # ----------------------------------------------------------------------------------------------------------------------
     def update_files(self):
         for file in self._download_paths:
             # Get file path and determine when it was last modified
@@ -59,7 +52,6 @@ class DataManager:
                     file.write(response.content)
                 print(f'{file["file"]} downloaded successfully.')
 
-# --------------------------------------------------------------------------------------------------------------------------   
 # Testing
 if __name__ == "__main__":
 

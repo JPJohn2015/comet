@@ -14,9 +14,14 @@ from comet.celestial.sun import Sun
 from comet.celestial.moon import Moon
 from comet.propagation.force_model import ForceModel
 from comet.propagation.satellite_properties import SatelliteProperties
-from comet.propagation.perturbation_model import AtmosphereModel, SRPModel, NBodyModel, GravityPotentialModel
+from comet.propagation.perturbation_model import (
+    AtmosphereModel,
+    SRPModel,
+    NBodyModel,
+    GravityPotentialModel,
+)
 
-# ---------------------------------------------------------------------------------------------------------------------------
+
 def two_body(t, y):
     """Dynamics for Two-Body Gravitation.
 
@@ -29,32 +34,37 @@ def two_body(t, y):
     """
     # Two Body propagation
     velocity = y[3:]
-    acceleration = -c.MU_EARTH*y[:3]/(np.linalg.norm(y[:3])**3)
+    acceleration = -c.MU_EARTH * y[:3] / (np.linalg.norm(y[:3]) ** 3)
 
     return np.append(velocity, acceleration)
 
-# ---------------------------------------------------------------------------------------------------------------------------
-def full_perturbations(t, y, start_epoch: Epoch, force_model: ForceModel, sat_properties: SatelliteProperties):
-    # Calculate current time 
+
+def full_perturbations(
+    t, y, start_epoch: Epoch, force_model: ForceModel, sat_properties: SatelliteProperties
+):
+    # Calculate current time
     current_epoch = start_epoch + Duration(seconds=t)
-    
+
     # Calculate Two Body propagation
     velocity = np.array(y[3:])
-    acceleration = np.array(-c.MU_EARTH*y[:3]/(np.linalg.norm(y[:3])**3))
+    acceleration = np.array(-c.MU_EARTH * y[:3] / (np.linalg.norm(y[:3]) ** 3))
 
     # Calculate Atmospheric Drag
     if force_model.drag:
         # Calculate Atmospheric Drag using an Exponential Model
-        #TODO: Implement Drag
+        # TODO: Implement Drag
         pass
 
     # Calculate Earth Oblateness
     if force_model.gravity:
         if force_model.gravity_model == GravityPotentialModel.EGM08:
-            #TODO: Implement EGM08 Gravity Model
+            # TODO: Implement EGM08 Gravity Model
             pass
         else:
-            if force_model.gravity_model in [GravityPotentialModel.J2, GravityPotentialModel.J2andJ3]:
+            if force_model.gravity_model in [
+                GravityPotentialModel.J2,
+                GravityPotentialModel.J2andJ3,
+            ]:
                 # Calculate J2 Gravitational Potential
                 ax, ay, az = J2_perturbation(t, y, c.MU_EARTH, c.J2_EARTH, c.RADIUS_EARTH)
 
@@ -70,16 +80,18 @@ def full_perturbations(t, y, start_epoch: Epoch, force_model: ForceModel, sat_pr
 
     # Calculate N-Body
     if force_model.nbody:
-        if force_model.nbody_model in [NBodyModel.SUN , NBodyModel.SUNandMOON]:
+        if force_model.nbody_model in [NBodyModel.SUN, NBodyModel.SUNandMOON]:
             # Calculate Third Body Acceleration due to Sun
             ax, ay, az = third_body_acceleration(t, y, c.MU_SUN, Sun().get_position(current_epoch))
-            
+
             # Add to Acceleration Vector
             acceleration += np.array([ax, ay, az])
 
-        if force_model.nbody_model in [NBodyModel.MOON , NBodyModel.SUNandMOON]:
+        if force_model.nbody_model in [NBodyModel.MOON, NBodyModel.SUNandMOON]:
             # Calculate Third Body Acceleration due to Moon
-            ax, ay, az = third_body_acceleration(t, y, c.MU_MOON, Moon().get_position(current_epoch))
+            ax, ay, az = third_body_acceleration(
+                t, y, c.MU_MOON, Moon().get_position(current_epoch)
+            )
 
             # Add to Acceleration Vector
             acceleration += np.array([ax, ay, az])
@@ -88,18 +100,23 @@ def full_perturbations(t, y, start_epoch: Epoch, force_model: ForceModel, sat_pr
     if force_model.srp:
         if force_model.srp_model in [SRPModel.SUN, SRPModel.SUNandALBEDO]:
             # Calculate Solar Radiation Pressure Acceleration due to Sun
-            ax, ay, az = solar_pressure_acceleration(t, y, sat_properties.Cr, sat_properties.area_to_mass(), 
-                                                     Sun().get_position(current_epoch))
+            ax, ay, az = solar_pressure_acceleration(
+                t,
+                y,
+                sat_properties.Cr,
+                sat_properties.area_to_mass(),
+                Sun().get_position(current_epoch),
+            )
 
             # Add to Acceleration Vector
             acceleration += np.array([ax, ay, az])
 
     # Calculate Thrust Acceleration
-    #TODO: Implement finite burns
+    # TODO: Implement finite burns
 
     return np.append(velocity, acceleration)
 
-# ---------------------------------------------------------------------------------------------------------------------------
+
 def third_body_acceleration(t, y, mu_3rd, r_third):
     """Calculates the N-Body Acceleration due to another celestial object.
 
@@ -116,11 +133,14 @@ def third_body_acceleration(t, y, mu_3rd, r_third):
     sat_to_3rd = r_third - y[:3]
 
     # Calculate Accleration
-    accel = mu_3rd*((sat_to_3rd/(np.linalg.norm(sat_to_3rd)**3)) - (r_third/(np.linalg.norm(r_third)**3)))
+    accel = mu_3rd * (
+        (sat_to_3rd / (np.linalg.norm(sat_to_3rd) ** 3))
+        - (r_third / (np.linalg.norm(r_third) ** 3))
+    )
 
     return accel[0], accel[1], accel[2]
 
-# ---------------------------------------------------------------------------------------------------------------------------
+
 def solar_pressure_acceleration(t, y, Cr, a_to_m, r_sun):
     """Calculates the N-Body Acceleration due to another celestial object.
 
@@ -138,6 +158,6 @@ def solar_pressure_acceleration(t, y, Cr, a_to_m, r_sun):
     sat_to_sun = r_sun - y[:3]
 
     # Calculate Acceleration
-    accel = (-c.SOLAR_PRESSURE*Cr*a_to_m)*(sat_to_sun/np.linalg.norm(sat_to_sun))
+    accel = (-c.SOLAR_PRESSURE * Cr * a_to_m) * (sat_to_sun / np.linalg.norm(sat_to_sun))
 
     return accel[0], accel[1], accel[2]

@@ -10,7 +10,6 @@ from comet.time.time_conversions import *
 from comet.time.duration import Duration
 
 
-# ---------------------------------------------------------------------------------------------------------------------------
 class TimeSystem(Enum):
     """Enum for different time systems.
 
@@ -24,7 +23,6 @@ class TimeSystem(Enum):
     TAI = "TAI"
 
 
-# --------------------------------------------------------------------------------------------------------------------------
 class Epoch:
     """Class that represents a specific instance of time. Times should be provided in UTC and are stored
     interally in UTC.
@@ -36,9 +34,6 @@ class Epoch:
         * epoch = Epoch(str)
     """
 
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Class Construction
-    # ----------------------------------------------------------------------------------------------------------------------
     def __init__(
         self,
         year: int = 2000,
@@ -116,9 +111,6 @@ class Epoch:
         # Calculate year, month, day, hour, minute and second as standard bounds
         self.__update()
 
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Class Methods
-    # ----------------------------------------------------------------------------------------------------------------------
     def copy(self):
         """Returns a copy of the Epoch.
 
@@ -127,7 +119,6 @@ class Epoch:
         """
         return Epoch(self.year, self.month, self.day, self.hour, self.minute, self.second)
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def julian_date(self, timesystem: TimeSystem | str = TimeSystem.UTC):
         """Returns the Julian Date in the specified TimeSystem.
 
@@ -154,7 +145,6 @@ class Epoch:
             case _:
                 raise Exception("Epoch(): Invalid TimeSystem")
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def modified_julian_date(self, timesystem: TimeSystem | str = TimeSystem.UTC):
         """Returns the Modified Julian Date in the specified TimeSystem.
 
@@ -181,7 +171,6 @@ class Epoch:
             case _:
                 raise Exception("Epoch(): Invalid TimeSystem")
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def unix(self, timesystem: TimeSystem | str = TimeSystem.UTC):
         """Returns UNIX Seconds in the specified TimeSystem.
 
@@ -208,7 +197,6 @@ class Epoch:
             case _:
                 raise Exception("Epoch(): Invalid TimeSystem")
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def datetime(self):
         """Returns a Datetime object
 
@@ -221,7 +209,6 @@ class Epoch:
 
         return datetime(y, mo, d, h, m, int(np.floor(s)), int(ms))
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def day_of_year(self):
         """Returns the Day of Year.
 
@@ -233,7 +220,6 @@ class Epoch:
         else:
             return np.cumsum(c.DAYS_PER_MONTH[: (self.month - 1)]) + self.day
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def julian_centuries(self, timesystem: TimeSystem | str = TimeSystem.UTC):
         """Returns the Number of Julian Centuries since J2000 in the specified TimeSystem.
 
@@ -262,7 +248,6 @@ class Epoch:
 
         return (jd - c.J2000) / c.JULIAN_CENTURY
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def to_dict(self):
         """Method that creates a dictionary of required inputs for Epoch construction.
 
@@ -271,7 +256,6 @@ class Epoch:
         """
         return {"type": "Epoch", "jd": self._jd}
 
-    # ----------------------------------------------------------------------------------------------------------------------
     @staticmethod
     def from_dict(dict):
         """Method that creates an Epoch from a dictionary of required inputs.
@@ -288,7 +272,6 @@ class Epoch:
 
         return Epoch(dict["jd"])
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __update(self):
         """Recalculates year, month, day, hour, minute and second values after class is updated."""
         # Calculate YMDHMS
@@ -303,7 +286,6 @@ class Epoch:
         self.minute = int(ymdhms[4])
         self.second = float(np.round(ymdhms[5], decimals=3))
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __date_round(self, ymdhms: np.ndarray):
         """Recalculates overflow of time properties.
 
@@ -318,9 +300,6 @@ class Epoch:
 
         return ymdhms
 
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Operator Methods
-    # ----------------------------------------------------------------------------------------------------------------------
     def __eq__(self, other) -> bool:
         """Override Equality operator."""
         # Error checking
@@ -330,7 +309,6 @@ class Epoch:
         # Compare Epochs
         return self._jd == other._jd
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __ne__(self, other) -> bool:
         """Override Non-Equality operator."""
         # Error checking
@@ -340,7 +318,6 @@ class Epoch:
         # Compare Epochs
         return self._jd != other._jd
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __lt__(self, other) -> bool:
         """Override Less Than operator."""
         # Error checking
@@ -350,7 +327,6 @@ class Epoch:
         # Compare Epochs
         return self._jd < other._jd
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __le__(self, other) -> bool:
         """Override Less Than or Equal To operator."""
         # Error checking
@@ -360,7 +336,6 @@ class Epoch:
         # Compare Epochs
         return self._jd <= other._jd
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __gt__(self, other) -> bool:
         """Override Greater Than operator."""
         # Error checking
@@ -370,7 +345,6 @@ class Epoch:
         # Compare Epochs
         return self._jd > other._jd
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __ge__(self, other) -> bool:
         """Override Greater Than or Equal To operator."""
         # Error checking
@@ -380,7 +354,6 @@ class Epoch:
         # Compare Epochs
         return self._jd >= other._jd
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __iadd__(self, duration):
         """Override += operator for adding Durations to Epochs."""
         # Error checking
@@ -395,7 +368,6 @@ class Epoch:
 
         return self
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __add__(self, duration):
         """Define Addition for adding Durations to Epochs."""
         # Error checking
@@ -409,7 +381,6 @@ class Epoch:
 
         return Epoch(jd)
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __isub__(self, duration):
         """Override -= operator for subtracting Durations from Epochs."""
         # Error checking
@@ -417,7 +388,6 @@ class Epoch:
             f"Iterative Subtraction is not defined between Epochs and {type(duration)}"
         )
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __sub__(self, time):
         """Define Substraction for subtracting Durations from Epochs or Epochs from Epochs."""
         # Error checking
@@ -434,7 +404,6 @@ class Epoch:
             dt = self._jd - time._jd
             return Duration(seconds=dt * c.DAY)
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __imul__(self, value):
         """Override *= operator for multiplying Epochs."""
         # Error checking
@@ -442,13 +411,11 @@ class Epoch:
             f"Iterative Multiplication is not defined between Epochs and {type(value)}"
         )
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __mul__(self, value):
         """Define Multiplication for multiplying Epochs."""
         # Error checking
         raise NotImplementedError(f"Multiplication is not defined between Epochs and {type(value)}")
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __rmul__(self, value):
         """Define Reverse Multiplication for multiplying Epochs."""
         # Error checking
@@ -456,13 +423,11 @@ class Epoch:
             f"Reverse Multiplication is not defined between Epochs and {type(value)}"
         )
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __truediv__(self, value):
         """Define Division for dividing Durations."""
         # Error checking
         raise NotImplementedError(f"Division is not defined between Epochs and {type(value)}")
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __rtruediv__(self, value):
         """Define Reverse Division for dividing Durations."""
         # Error checking
@@ -470,16 +435,12 @@ class Epoch:
             f"Reverse Division is not defined between Epochs and {type(value)}"
         )
 
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Representation Methods
-    # ----------------------------------------------------------------------------------------------------------------------
     def __str__(self):
         """String Representation of Epoch Class"""
         ymd = f"{self.month:02d}/{self.day:02d}/{self.year:04d}"
         hms = f"{self.hour:02d}:{self.minute:02d}:{self.second:06.3f}"
         return f"{ymd} {hms} UTC"
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def __repr__(self):
         """Class Representation of Epoch Class"""
         return f"Epoch({self.year}, {self.month}, {self.day}, {self.hour}, {self.minute}, {self.second:06.3f})"

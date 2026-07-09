@@ -7,7 +7,6 @@ import httpx
 import os
 
 
-# --------------------------------------------------------------------------------------------------------------------------
 class SpaceTrackManager:
     """Class that Processes, Downloads and Updates TLEs through the SpaceTrack API.
 
@@ -16,9 +15,6 @@ class SpaceTrackManager:
         * st = SpaceTrackAPI(username, password)
     """
 
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Class Construction
-    # ----------------------------------------------------------------------------------------------------------------------
     def __init__(self, username: str = None, password: str = None):
         """Construction of SpaceTrackAPI interface. Username and Password can be provided to the Class directly, or accessed
         through environmental variables SPACETRACK_USERNAME and SPACETRACK_PASSWORD. To set SpaceTrack Credientials to
@@ -71,9 +67,6 @@ class SpaceTrackManager:
         ]
         self._assigned_keys = ["ordinal", "epoch", "country"]
 
-    # ----------------------------------------------------------------------------------------------------------------------
-    # Class Methods
-    # ----------------------------------------------------------------------------------------------------------------------
     def query(
         self,
         filters: str | list[str] = None,
@@ -139,7 +132,6 @@ class SpaceTrackManager:
 
         return data
 
-    # ----------------------------------------------------------------------------------------------------------------------
     def build_query(self, filters, norad_id, format):
         """Builds dictionary of SpaceTrack processed query to send to SpaceTrack API Client.
 
@@ -208,7 +200,6 @@ class SpaceTrackManager:
         return processed_query
 
 
-# --------------------------------------------------------------------------------------------------------------------------
 # Testing
 if __name__ == "__main__":
     st = SpaceTrackManager(username="james.johnson@trueanomaly.space", password="ZaQ1XsW2CdE3VfR4_")

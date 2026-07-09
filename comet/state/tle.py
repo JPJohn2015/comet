@@ -25,15 +25,66 @@ class TLE:
     """
 
     def __init__(self, *args):
+        """Defines a Two-Lined Element Set.
 
+        Construct from two TLE lines as strings.
+
+        Args:
+            line1 (str): TLE Line 1.
+            line2 (str): TLE Line 2.
+
+        Construct from a list/tuple of two TLE lines.
+
+        Args:
+            lines (list|tuple): List of two TLE lines.
+        """
         if len(args) == 2:
-            self._line1 = args[0]
-            self._line2 = args[1]
+            if not isinstance(args[0], str) or not isinstance(args[1], str):
+                raise TypeError("TLE(): Both lines must be strings")
+            self._line1 = args[0].strip()
+            self._line2 = args[1].strip()
         elif len(args) == 1:
-            self._line1 = args[0][0]
-            self._line2 = args[0][1]
+            if not isinstance(args[0], (list, tuple)) or len(args[0]) != 2:
+                raise TypeError("TLE(): Input must be a list/tuple of 2 TLE lines")
+            if not isinstance(args[0][0], str) or not isinstance(args[0][1], str):
+                raise TypeError("TLE(): Both lines must be strings")
+            self._line1 = args[0][0].strip()
+            self._line2 = args[0][1].strip()
         else:
             raise ValueError("TLE(): Invalid number of inputs")
+
+        # Basic validation
+        if len(self._line1) < 69:
+            raise ValueError("TLE(): Line 1 must be at least 69 characters")
+        if len(self._line2) < 69:
+            raise ValueError("TLE(): Line 2 must be at least 69 characters")
+        if self._line1[0] != '1':
+            raise ValueError("TLE(): Line 1 must start with '1'")
+        if self._line2[0] != '2':
+            raise ValueError("TLE(): Line 2 must start with '2'")
+
+    def copy(self):
+        """Returns a copy of the TLE.
+
+        Returns:
+            tle (TLE): Copy of the TLE.
+        """
+        return TLE(self._line1, self._line2)
+
+    @property
+    def line1(self) -> str:
+        """TLE line 1."""
+        return self._line1
+
+    @property
+    def line2(self) -> str:
+        """TLE line 2."""
+        return self._line2
+
+    @property
+    def lines(self) -> tuple:
+        """Both TLE lines as a tuple."""
+        return (self._line1, self._line2)
 
     def norad_id(self) -> int:
         """Returns the NORAD ID.
@@ -195,14 +246,14 @@ class TLE:
         Returns:
             state (State): Cartesian State.
         """
-        element_array = [
+        element_array = np.array([
             self.semimajor_axis(),
             self.eccentricity(),
             self.inclination(),
             self.right_ascension(),
             self.argument_perigee(),
             self.true_anomaly(),
-        ]
+        ])
         return State(elements_to_cartesian(element_array))
 
     def to_elements(self):
@@ -245,6 +296,10 @@ class TLE:
 
         return TLE(dict["line1"], dict["line2"])
 
+    def __hash__(self):
+        """Make TLE hashable for use in sets and as dictionary keys."""
+        return hash((self._line1, self._line2))
+
     def __eq__(self, other) -> bool:
         """Override Equality operator."""
         # Error checking
@@ -252,8 +307,7 @@ class TLE:
             raise NotImplementedError(f"Comparison is not defined for {type(other)}")
 
         # Compare TLEs
-        if isinstance(other, TLE):
-            return np.all([self._line1 == other._line1, self._line2 == other._line2])
+        return self._line1 == other._line1 and self._line2 == other._line2
 
     def __ne__(self, other) -> bool:
         """Override Non-Equality operator."""
@@ -262,8 +316,23 @@ class TLE:
             raise NotImplementedError(f"Comparison is not defined for {type(other)}")
 
         # Compare TLEs
-        if isinstance(other, TLE):
-            return np.any([self._line1 != other._line1, self._line2 != other._line2])
+        return self._line1 != other._line1 or self._line2 != other._line2
+
+    def __lt__(self, other) -> bool:
+        """Override Less Than operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __le__(self, other) -> bool:
+        """Override Less Than or Equal To operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __gt__(self, other) -> bool:
+        """Override Greater Than operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __ge__(self, other) -> bool:
+        """Override Greater Than or Equal To operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
 
     def __str__(self):
         """String Representation of TLE Class"""

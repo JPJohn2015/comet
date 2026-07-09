@@ -6,6 +6,10 @@ import os.path
 import httpx
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class SpaceTrackManager:
     """Class that Processes, Downloads and Updates TLEs through the SpaceTrack API.
@@ -35,9 +39,9 @@ class SpaceTrackManager:
         self.username = username
         self.password = password
         if self.username is None:
-            self.username = os.getenv("SPACETRACK_USERNAME")
+            self.username = os.environ["SPACETRACK_USERNAME"]
         if self.password is None:
-            self.password = os.getenv("SPACETRACK_PASSWORD")
+            self.password = os.environ["SPACETRACK_PASSWORD"]
 
         # If still no Username or Password is provided,
         if not self.username or not self.password:
@@ -202,7 +206,7 @@ class SpaceTrackManager:
 
 # Testing
 if __name__ == "__main__":
-    st = SpaceTrackManager(username="james.johnson@trueanomaly.space", password="ZaQ1XsW2CdE3VfR4_")
+    st = SpaceTrackManager()
     filter = ["0.99 <= mean_motion <= 1.01", "eccentricity <= 0.01", "ordinal = 1", "epoch <= 30"]
     data = st.query(filter, save=True, filename="test.tle")
     print(data)

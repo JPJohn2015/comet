@@ -51,7 +51,7 @@ class Elements:
             if not np.all(
                 [isinstance(arg, int | float | np.int64 | np.float64) for arg in args[0]]
             ):
-                raise TypeError("Elements(): Values inside State array must be an integer or float")
+                raise TypeError("Elements(): Values inside Elements array must be an integer or float")
             self._raw = np.array(args[0])
 
         else:
@@ -64,6 +64,41 @@ class Elements:
             elements (Elements): Copy of the Elements.
         """
         return Elements(self._raw)
+
+    @property
+    def sma(self) -> float:
+        """Semi-major axis in km."""
+        return self._raw[0]
+
+    @property
+    def ecc(self) -> float:
+        """Eccentricity."""
+        return self._raw[1]
+
+    @property
+    def inc(self) -> float:
+        """Inclination in rad."""
+        return self._raw[2]
+
+    @property
+    def raan(self) -> float:
+        """Right ascension of ascending node in rad."""
+        return self._raw[3]
+
+    @property
+    def ap(self) -> float:
+        """Argument of perigee in rad."""
+        return self._raw[4]
+
+    @property
+    def ta(self) -> float:
+        """True anomaly in rad."""
+        return self._raw[5]
+
+    @property
+    def ma(self) -> float:
+        """Mean anomaly in rad."""
+        return self.mean_anomaly()
 
     def semi_major_axis(self) -> float:
         """Returns the Semi-Major Axis of the Elements Set.
@@ -139,11 +174,11 @@ class Elements:
             (self._raw[1] * np.sin(self._raw[5])) / (1 + self._raw[1] * np.cos(self._raw[5]))
         )
 
-    def longitude_of_pariapsis(self) -> float:
-        """Returns the Longitude of Pariapsis of the Elements Set.
+    def longitude_of_periapsis(self) -> float:
+        """Returns the Longitude of Periapsis of the Elements Set.
 
         Returns:
-            lp (float): Longitude of Pariapsis in rad.
+            lp (float): Longitude of Periapsis in rad.
         """
         return self._raw[3] + self._raw[4]
 
@@ -219,6 +254,22 @@ class Elements:
         """
         return self.radius() <= c.RADIUS_EARTH
 
+    def orbit_type(self) -> str:
+        """Returns the type of orbit based on eccentricity.
+
+        Returns:
+            str: Orbit type ('circular', 'elliptical', 'parabolic', 'hyperbolic').
+        """
+        e = self._raw[1]
+        if e < 0.01:
+            return 'circular'
+        elif e < 1.0:
+            return 'elliptical'
+        elif np.isclose(e, 1.0, rtol=1e-6):
+            return 'parabolic'
+        else:
+            return 'hyperbolic'
+
     def to_state(self):
         """Returns the Cartesian State Representation
 
@@ -253,17 +304,21 @@ class Elements:
 
         return Elements(dict["vector"])
 
+    def __hash__(self):
+        """Make Elements hashable for use in sets and as dictionary keys."""
+        return hash(tuple(self._raw))
+
     def __eq__(self, other) -> bool:
         """Override Equality operator."""
         # Error checking
         if not isinstance(other, Elements | list | np.ndarray):
             raise NotImplementedError(f"Comparison is not defined for {type(other)}")
 
-        # Compare states
+        # Compare elements
         if isinstance(other, Elements):
-            return np.all(self._raw == other._raw)
+            return np.allclose(self._raw, other._raw)
         elif isinstance(other, list | np.ndarray):
-            return np.all(self._raw == other)
+            return np.allclose(self._raw, other)
 
     def __ne__(self, other) -> bool:
         """Override Non-Equality operator."""
@@ -271,11 +326,27 @@ class Elements:
         if not isinstance(other, Elements | list | np.ndarray):
             raise NotImplementedError(f"Comparison is not defined for {type(other)}")
 
-        # Compare states
+        # Compare elements
         if isinstance(other, Elements):
             return np.any(self._raw != other._raw)
         elif isinstance(other, list | np.ndarray):
             return np.any(self._raw != other)
+
+    def __lt__(self, other) -> bool:
+        """Override Less Than operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __le__(self, other) -> bool:
+        """Override Less Than or Equal To operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __gt__(self, other) -> bool:
+        """Override Greater Than operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
+
+    def __ge__(self, other) -> bool:
+        """Override Greater Than or Equal To operator."""
+        raise NotImplementedError(f"Comparison is not defined for {type(other)}")
 
     def __getitem__(self, i):
         """Define key indexing for getting components in Elements."""

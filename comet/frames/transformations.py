@@ -18,21 +18,20 @@ def rot_eci_to_ecef(epoch: npt.ArrayLike):
         epoch (npt.ArrayLike): Epoch or Array of Epochs.
 
     Returns:
-        rot( npt.ArrayLike): Nx3x3 Array of Rotation Matricies.
+        rot (npt.ArrayLike): Nx3x3 Array of Rotation Matrices.
     """
-    # Check dimensions of Epoch
-    epoch = np.atleast_1d(epoch)
+    # Calculate Rotation Matrices (vectorized)
+    rot_pm = polar_motion(epoch)
+    rot_era = earth_rotation(epoch)
+    rot_pn = precession_nutation(epoch)
 
-    rot = np.zeros((len(epoch), 3, 3))
-    for i in range(0, len(epoch)):
-        # Calculate Rotation Matricies
-        rot_pm = polar_motion(epoch[i])
-        rot_era = earth_rotation(epoch[i])
-        rot_pn = precession_nutation(epoch[i])
-
-        rot[i, ...] = np.matmul(rot_pm, np.matmul(rot_era, rot_pn))
-
-    return rot
+    # Handle both scalar and array cases
+    if rot_pm.ndim == 2:
+        # Single epoch case
+        return np.matmul(rot_pm, np.matmul(rot_era, rot_pn))
+    else:
+        # Multiple epochs case
+        return np.matmul(rot_pm, np.matmul(rot_era, rot_pn))
 
 
 def rot_ecef_to_eci(epoch: Epoch):
@@ -42,21 +41,20 @@ def rot_ecef_to_eci(epoch: Epoch):
         epoch (npt.ArrayLike): Epoch or Array of Epochs.
 
     Returns:
-        rot( npt.ArrayLike): Nx3x3 Array of Rotation Matricies.
+        rot (npt.ArrayLike): Nx3x3 Array of Rotation Matrices.
     """
-    # Check dimensions of Epoch
-    epoch = np.atleast_1d(epoch)
+    # Calculate Rotation Matrices (vectorized)
+    rot_pm = polar_motion(epoch)
+    rot_era = earth_rotation(epoch)
+    rot_pn = precession_nutation(epoch)
 
-    rot = np.zeros((len(epoch), 3, 3))
-    for i in range(0, len(epoch)):
-        # Calculate Rotation Matricies
-        rot_pm = polar_motion(epoch[i])
-        rot_era = earth_rotation(epoch[i])
-        rot_pn = precession_nutation(epoch[i])
-
-        rot[i, ...] = np.matmul(rot_pn.T, np.matmul(rot_era.T, rot_pm.T))
-
-    return rot
+    # Handle both scalar and array cases
+    if rot_pm.ndim == 2:
+        # Single epoch case
+        return np.matmul(rot_pn.T, np.matmul(rot_era.T, rot_pm.T))
+    else:
+        # Multiple epochs case - transpose last two dimensions
+        return np.matmul(np.transpose(rot_pn, (0, 2, 1)), np.matmul(np.transpose(rot_era, (0, 2, 1)), np.transpose(rot_pm, (0, 2, 1))))
 
 
 def eci_to_ecef(epoch: npt.ArrayLike, state: npt.ArrayLike):
@@ -75,30 +73,36 @@ def eci_to_ecef(epoch: npt.ArrayLike, state: npt.ArrayLike):
     if len(state) != len(epoch):
         raise ValueError("eci_to_ecef(): length of epoch does not match length of state")
 
-    ecef_state = np.zeros(state.shape)
-    for i in range(0, len(epoch)):
-        # Calculate Rotation Matricies
-        rot_pm = polar_motion(epoch[i])
-        rot_era = earth_rotation(epoch[i])
-        rot_pn = precession_nutation(epoch[i])
+    # Calculate Rotation Matrices (vectorized)
+    rot_pm = polar_motion(epoch)
+    rot_era = earth_rotation(epoch)
+    rot_pn = precession_nutation(epoch)
 
-        # Calculate ECEF positions
-        ecef_pos = np.matmul(rot_pm, np.matmul(rot_era, np.matmul(rot_pn, state[i, 0:3])))
-        if len(state[i, :]) == 6:
-            ecef_vel = np.matmul(
-                rot_pm,
-                np.matmul(
-                    rot_era,
-                    np.matmul(
-                        rot_pn,
-                        state[i, 3:6]
-                        - np.cross([0, 0, c.OMEGA_EARTH], np.matmul(rot_pn, state[i, 0:3])),
-                    ),
-                ),
-            )
-            ecef_state[i, :] = np.append(ecef_pos, ecef_vel)
-        else:
-            ecef_state[i, :] = ecef_pos
+    # Ensure matrices are 3D (N, 3, 3)
+    if rot_pm.ndim == 2:
+        rot_pm = rot_pm[np.newaxis, ...]
+        rot_era = rot_era[np.newaxis, ...]
+        rot_pn = rot_pn[np.newaxis, ...]
+
+    # Transform positions using vectorized matmul
+    pos_eci = state[:, 0:3]
+    pos_temp = np.einsum("nij,nj->ni", rot_pn, pos_eci)
+    pos_temp = np.einsum("nij,nj->ni", rot_era, pos_temp)
+    ecef_pos = np.einsum("nij,nj->ni", rot_pm, pos_temp)
+
+    # Transform velocities if present
+    if state.shape[1] == 6:
+        vel_eci = state[:, 3:6]
+        # Subtract Earth rotation effect (omega x pos_intermediate) in ECI frame before rotating
+        omega_cross_pos = np.cross([0, 0, c.OMEGA_EARTH], pos_temp)
+        vel_adjusted = vel_eci - omega_cross_pos
+        # Apply full rotation chain
+        vel_temp = np.einsum("nij,nj->ni", rot_pn, vel_adjusted)
+        vel_temp = np.einsum("nij,nj->ni", rot_era, vel_temp)
+        ecef_vel = np.einsum("nij,nj->ni", rot_pm, vel_temp)
+        ecef_state = np.hstack([ecef_pos, ecef_vel])
+    else:
+        ecef_state = ecef_pos
 
     return np.squeeze(ecef_state)
 
@@ -119,26 +123,40 @@ def ecef_to_eci(epoch: npt.ArrayLike, state: npt.ArrayLike):
     if len(state) != len(epoch):
         raise ValueError("ecef_to_eci(): length of epoch does not match length of state")
 
-    eci_state = np.zeros(state.shape)
-    for i in range(0, len(epoch)):
-        # Calculate Rotation Matricies
-        rot_pm = polar_motion(epoch[i])
-        rot_era = earth_rotation(epoch[i])
-        rot_pn = precession_nutation(epoch[i])
+    # Calculate Rotation Matrices (vectorized)
+    rot_pm = polar_motion(epoch)
+    rot_era = earth_rotation(epoch)
+    rot_pn = precession_nutation(epoch)
 
-        # Calculate ECI positions
-        eci_pos = np.matmul(rot_pn.T, np.matmul(rot_era.T, np.matmul(rot_pm.T, state[i, 0:3])))
-        if len(state[i, :]) == 6:
-            eci_vel = np.matmul(
-                rot_pn.T,
-                np.matmul(rot_era.T, np.matmul(rot_pm.T, state[i, 3:6]))
-                + np.cross(
-                    [0, 0, c.OMEGA_EARTH], np.matmul(rot_era.T, np.matmul(rot_pm.T, state[i, 0:3]))
-                ),
-            )
-            eci_state[i, :] = np.append(eci_pos, eci_vel)
-        else:
-            eci_state[i, :] = eci_pos
+    # Ensure matrices are 3D (N, 3, 3)
+    if rot_pm.ndim == 2:
+        rot_pm = rot_pm[np.newaxis, ...]
+        rot_era = rot_era[np.newaxis, ...]
+        rot_pn = rot_pn[np.newaxis, ...]
+
+    # Transform positions using vectorized matmul (transpose for inverse)
+    pos_ecef = state[:, 0:3]
+    pos_temp = np.einsum("nji,nj->ni", rot_pm, pos_ecef)
+    pos_temp = np.einsum("nji,nj->ni", rot_era, pos_temp)
+    eci_pos = np.einsum("nji,nj->ni", rot_pn, pos_temp)
+
+    # Transform velocities if present
+    if state.shape[1] == 6:
+        vel_ecef = state[:, 3:6]
+        # Rotate velocity through first two rotations
+        vel_temp = np.einsum("nji,nj->ni", rot_pm, vel_ecef)
+        vel_temp = np.einsum("nji,nj->ni", rot_era, vel_temp)
+        # Add Earth rotation effect (omega x pos_intermediate)
+        # pos_intermediate is position after rot_pm.T @ rot_era.T (before rot_pn.T)
+        pos_intermediate = np.einsum("nji,nj->ni", rot_pm, pos_ecef)
+        pos_intermediate = np.einsum("nji,nj->ni", rot_era, pos_intermediate)
+        omega_cross_pos = np.cross([0, 0, c.OMEGA_EARTH], pos_intermediate)
+        vel_adjusted = vel_temp + omega_cross_pos
+        # Apply final rotation
+        eci_vel = np.einsum("nji,nj->ni", rot_pn, vel_adjusted)
+        eci_state = np.hstack([eci_pos, eci_vel])
+    else:
+        eci_state = eci_pos
 
     return np.squeeze(eci_state)
 
@@ -210,6 +228,8 @@ def lla_to_ecef(lla_state: npt.ArrayLike, velocity: npt.ArrayLike = None):
             [x / 1000, y / 1000, z / 1000, np.zeros(x.shape), np.zeros(y.shape), np.zeros(z.shape)]
         ).T
     else:
+        # Handle both 1D and 2D velocity arrays
+        velocity = np.atleast_2d(velocity)
         ecef_state = np.array(
             [x / 1000, y / 1000, z / 1000, velocity[:, 0], velocity[:, 1], velocity[:, 2]]
         ).T

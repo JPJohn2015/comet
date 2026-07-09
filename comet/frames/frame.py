@@ -15,7 +15,7 @@ class ManeuverFrame(str, Enum):
 class StateFrame(str, Enum):
     """Enum for which Coordinate Frame the State Data is represented.
 
-    ManeuverFrame options are: ECI, RIC.
+    StateFrame options are: ECI, ECEF, LLA.
     """
 
     ECI = "ECI"

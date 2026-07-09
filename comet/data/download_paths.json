@@ -1,0 +1,26 @@
+[
+    {
+        "folder": "iau",
+        "file": "iau2000A_finals_ab.txt",
+        "source": "https://datacenter.iers.org/products/eop/rapid/standard/finals2000A.all",
+        "update": "daily"
+    },
+    {
+        "folder": "iau",
+        "file": "tab5_2a.txt",
+        "source": "https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2a.txt",
+        "update": "weekly"
+    },
+    {
+        "folder": "iau",
+        "file": "tab5_2b.txt",
+        "source": "https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2b.txt",
+        "update": "weekly"
+    },
+    {
+        "folder": "iau",
+        "file": "tab5_2d.txt",
+        "source": "https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2d.txt",
+        "update": "weekly"
+    }
+]

@@ -1,0 +1,65 @@
+[project]
+name = "comet"
+authors = [
+  { name = "James Johnson", email = "jp_johnson@comcast.net" },
+]
+description = "Comprehensive Orbit Mechanics and Engineering Toolkit"
+readme = "README.md"
+requires-python = ">=3.10"
+version = "0.1.0"
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "attrs",
+    "poliastro",
+    "pytest",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+]
+test = [
+    "pytest>=6.0",
+    "pytest-cov",
+]
+all = [
+    "comet[dev]",
+    "comet[test]",
+]
+
+[build-system]
+requires = [
+    "setuptools>=61",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["comet*"]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+  "--color=yes",
+  "--failed-first",
+  "--import-mode=importlib",
+]
+testpaths = [
+    "tests"
+]
+pythonpath = [
+    "."
+]

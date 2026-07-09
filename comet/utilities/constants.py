@@ -64,6 +64,15 @@ class Constants:
     # SUN: Solar properties
     SOLAR_PRESSURE = 4.57e-6  # [N/m²] or [Pa] Solar radiation pressure at 1 AU
 
+    # ATMOSPHERE: Atmospheric properties for drag modeling
+    # Exponential atmosphere model reference values (h₀ = 700 km)
+    ATM_RHO_0 = 5.24e-14  # [kg/m³] Reference density at 700 km altitude
+    ATM_H_0 = 700.0  # [km] Reference altitude
+    ATM_SCALE_HEIGHT = 88.667  # [km] Scale height for exponential model
+
+    # Earth albedo coefficient for reflected sunlight
+    EARTH_ALBEDO = 0.3  # [-] Average Earth albedo (unitless)
+
     # CALENDAR: Calendar Days
     DAYS_PER_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     DAYS_PER_MONTH_LEAP = [0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]

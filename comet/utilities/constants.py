@@ -23,12 +23,13 @@ class Constants:
     RAD2AS = 1 / AS2RAD
 
     # TIME SYSTEMS: Conversions between time systems
-    UTC_TAI = 37  # [sec]
-    TAI_UTC = -37  # [sec]
-    TAI_TT = 32.184  # [sec]
-    TT_TAI = -32.184  # [sec]
-    UTC_TT = 69.184  # [sec]
-    TT_UTC = -69.184  # [sec]
+    # NOTE: UTC-TAI offset changes with leap seconds; value below is as of January 2017
+    UTC_TAI = 37  # [sec] Offset UTC to TAI (changes with leap seconds)
+    TAI_UTC = -37  # [sec] Offset TAI to UTC (changes with leap seconds)
+    TAI_TT = 32.184  # [sec] Offset TAI to TT (fixed by definition)
+    TT_TAI = -32.184  # [sec] Offset TT to TAI (fixed by definition)
+    UTC_TT = 69.184  # [sec] Offset UTC to TT (changes with leap seconds)
+    TT_UTC = -69.184  # [sec] Offset TT to UTC (changes with leap seconds)
 
     # EPOCH: Epochs of various time systems
     UNIX0 = 2440587.5  # [days] January 1, 1970 GMT
@@ -49,19 +50,19 @@ class Constants:
     # ASTRONOMY: Solar System constants
     AU = 1.495978707e8  # [km]
 
-    # EARTH: Gravity properties
-    SURFACE_GRAVITY = 9.807
-    J2_EARTH = 0.001082
-    J3_EARTH = -0.0000025
-    OMEGA_EARTH = 7.292115e-5
-    FLATTENING_EARTH = 298.257223563
-    A_EARTH = 6378137.0
-    B_EARTH = A_EARTH * (1 - 1 / FLATTENING_EARTH)
-    E_SQ_EARTH = 1 - (B_EARTH**2 / A_EARTH**2)
-    EP_SQ_EARTH = (A_EARTH**2 - B_EARTH**2) / B_EARTH**2
+    # EARTH: Gravity and ellipsoid properties (WGS84)
+    SURFACE_GRAVITY = 9.807  # [m/s²] Standard gravity at sea level
+    J2_EARTH = 0.001082  # [-] Second zonal harmonic coefficient
+    J3_EARTH = -0.0000025  # [-] Third zonal harmonic coefficient
+    OMEGA_EARTH = 7.292115e-5  # [rad/s] Earth rotation rate
+    FLATTENING_EARTH = 298.257223563  # [-] Inverse flattening (1/f)
+    A_EARTH = 6378137.0  # [m] Semi-major axis (equatorial radius) - NOTE: meters, not km
+    B_EARTH = A_EARTH * (1 - 1 / FLATTENING_EARTH)  # [m] Semi-minor axis (polar radius)
+    E_SQ_EARTH = 1 - (B_EARTH**2 / A_EARTH**2)  # [-] First eccentricity squared
+    EP_SQ_EARTH = (A_EARTH**2 - B_EARTH**2) / B_EARTH**2  # [-] Second eccentricity squared
 
     # SUN: Solar properties
-    SOLAR_PRESSURE = 4.57e-6
+    SOLAR_PRESSURE = 4.57e-6  # [N/m²] or [Pa] Solar radiation pressure at 1 AU
 
     # CALENDAR: Calendar Days
     DAYS_PER_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]

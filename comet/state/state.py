@@ -98,6 +98,52 @@ class State:
         """
         return self._raw[3:]
 
+    @property
+    def x(self) -> float:
+        """X component of position in km."""
+        return self._raw[0]
+
+    @property
+    def y(self) -> float:
+        """Y component of position in km."""
+        return self._raw[1]
+
+    @property
+    def z(self) -> float:
+        """Z component of position in km."""
+        return self._raw[2]
+
+    @property
+    def vx(self) -> float:
+        """X component of velocity in km/s."""
+        return self._raw[3]
+
+    @property
+    def vy(self) -> float:
+        """Y component of velocity in km/s."""
+        return self._raw[4]
+
+    @property
+    def vz(self) -> float:
+        """Z component of velocity in km/s."""
+        return self._raw[5]
+
+    def position_magnitude(self) -> float:
+        """Returns the magnitude of the position vector.
+
+        Returns:
+            float: Position magnitude in km.
+        """
+        return np.linalg.norm(self._raw[:3])
+
+    def velocity_magnitude(self) -> float:
+        """Returns the magnitude of the velocity vector.
+
+        Returns:
+            float: Velocity magnitude in km/s.
+        """
+        return np.linalg.norm(self._raw[3:])
+
     def angular_momentum(self) -> np.ndarray:
         """Returns the specific relative angular momentum of the State.
 
@@ -106,29 +152,51 @@ class State:
         """
         return np.cross(self._raw[:3], self._raw[3:])
 
+    def angular_momentum_magnitude(self) -> float:
+        """Returns the magnitude of the specific angular momentum.
+
+        Returns:
+            float: Angular momentum magnitude in km^2/s.
+        """
+        return np.linalg.norm(self.angular_momentum())
+
     def semimajor_axis(self) -> float:
         """Returns the Semi-Major Axis of the State.
+
+        For elliptical orbits, returns positive value.
+        For hyperbolic orbits, returns negative value.
+        For parabolic orbits, returns infinity.
 
         Returns:
             sma (float): Semi-Major Axis in km.
         """
         # Position and Velocity Magnitudes
-        r = np.linalg.norm(self.position())
-        v = np.linalg.norm(self.velocity())
+        r = self.position_magnitude()
+        v = self.velocity_magnitude()
 
-        return 1 / ((2 / r) - (v**2) / c.MU_EARTH)
+        return 1.0 / ((2.0 / r) - (v**2) / c.MU_EARTH)
 
     def eccentricity(self) -> float:
         """Returns the Eccentricity of the State.
 
         Returns:
-            ecc (float): Eccentricity.
+            ecc (float): Eccentricity (0 = circular, <1 = elliptical, 1 = parabolic, >1 = hyperbolic).
         """
         # Angular Momentum and Semi-Major Axis
-        h = np.linalg.norm(self.angular_momentum())
+        h = self.angular_momentum_magnitude()
         a = self.semimajor_axis()
 
-        return np.sqrt(1 - (h**2) / (c.MU_EARTH * a))
+        # Handle hyperbolic orbits (negative a)
+        parameter = (h**2) / (c.MU_EARTH * np.abs(a))
+        if a > 0:
+            # Elliptical orbit
+            # Clamp parameter to handle numerical errors near circular orbits
+            if parameter >= 1.0:
+                return 0.0
+            return np.sqrt(1.0 - parameter)
+        else:
+            # Hyperbolic orbit
+            return np.sqrt(1.0 + parameter)
 
     def inclination(self) -> float:
         """Returns the Inclination of the State.
@@ -194,13 +262,29 @@ class State:
 
         return -c.MU_EARTH / (2 * a)
 
+    def orbit_type(self) -> str:
+        """Returns the type of orbit based on eccentricity.
+
+        Returns:
+            str: Orbit type ('circular', 'elliptical', 'parabolic', 'hyperbolic').
+        """
+        e = self.eccentricity()
+        if e < 0.01:
+            return 'circular'
+        elif e < 1.0:
+            return 'elliptical'
+        elif np.isclose(e, 1.0, rtol=1e-6):
+            return 'parabolic'
+        else:
+            return 'hyperbolic'
+
     def inside_earth(self) -> bool:
         """Returns whether the State is currently inside Earth's Radius.
 
         Returns:
             inside (bool): Inside Earth.
         """
-        return np.linalg.norm(self.position()) <= c.RADIUS_EARTH
+        return self.position_magnitude() <= c.RADIUS_EARTH
 
     def to_elements(self):
         """Returns the Classical Orbital Elements Representation.
@@ -236,6 +320,10 @@ class State:
 
         return State(dict["vector"])
 
+    def __hash__(self):
+        """Make State hashable for use in sets and as dictionary keys."""
+        return hash(tuple(self._raw))
+
     def __eq__(self, other) -> bool:
         """Override Equality operator."""
         # Error checking
@@ -244,9 +332,9 @@ class State:
 
         # Compare states
         if isinstance(other, State):
-            return np.all(self._raw == other._raw)
+            return np.allclose(self._raw, other._raw)
         elif isinstance(other, list | np.ndarray):
-            return np.all(self._raw == other)
+            return np.allclose(self._raw, other)
 
     def __ne__(self, other) -> bool:
         """Override Non-Equality operator."""
@@ -343,7 +431,7 @@ class State:
         return self
 
     def __sub__(self, value):
-        """Define Substraction for subtracting values from States."""
+        """Define Subtraction for subtracting values from States."""
         # Error checking
         if not isinstance(value, State | list | np.ndarray):
             raise NotImplementedError(
@@ -359,7 +447,7 @@ class State:
         return State(state)
 
     def __rsub__(self, value):
-        """Define Reverse Substraction for subtracting values from States."""
+        """Define Reverse Subtraction for subtracting values from States."""
         # Error checking
         if not isinstance(value, State | list | np.ndarray):
             raise NotImplementedError(
@@ -383,7 +471,7 @@ class State:
             )
 
         # Multiply State by value
-        self._raw = np.matmul(self._raw, value)
+        self._raw = self._raw * value
 
         return self
 
@@ -396,7 +484,7 @@ class State:
             )
 
         # Multiply State by value
-        state = np.matmul(self._raw, value)
+        state = self._raw * value
 
         return State(state)
 
@@ -409,7 +497,7 @@ class State:
             )
 
         # Multiply State by value
-        state = np.matmul(self._raw, value)
+        state = value * self._raw
 
         return State(state)
 
@@ -428,7 +516,7 @@ class State:
         """Define Reverse Division for dividing values by States."""
         # Error checking
         raise NotImplementedError(
-            f"Reverse Division is not defined between Epochs and {type(value)}"
+            f"Reverse Division is not defined between States and {type(value)}"
         )
 
     def __getitem__(self, i):

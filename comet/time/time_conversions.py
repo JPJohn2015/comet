@@ -26,6 +26,11 @@ def ymdhms_to_jd(
     Source:
         Vallado, "Fundamentals of Astrodynamics and Applications", pg. 183
     """
+    # Adjust for January/February (treat as months 13/14 of previous year)
+    if month <= 2:
+        year = year - 1
+        month = month + 12
+
     # Calculate Julian Date from YMDHMS
     b_coeff = 2 - int(year / 100) + int(int(year / 100) / 4)
     c_coeff = (((second / 60) + minute) / 60 + hour) / 24
@@ -49,24 +54,40 @@ def jd_to_ymdhms(jd: float):
         second (float): Seconds
 
     Source:
-        ESA Navipedia, https://gssc.esa.int/navipedia/index.php/Julian_Date
+        Vallado, "Fundamentals of Astrodynamics and Applications", pg. 184, Algorithm 22
     """
-    # Calculate intermediate variables
-    a = int(jd + 0.5)
-    b = a + 1537
-    c = int((b - 122.1) / 365.25)
-    d = int(365.25 * c)
-    e = int((b - d) / 30.6001)
+    # Separate integer and fractional parts
+    T1900 = (jd - 2415019.5) / 365.25
+    year = 1900 + int(T1900)
+    leapyrs = int((year - 1900 - 1) / 4)
+    days = (jd - 2415019.5) - ((year - 1900) * 365.0 + leapyrs)
 
-    # Calculate Year, Month and Day
-    day = (b - d) - int(30.6001 * e) + np.modf(jd + 0.5)[0]
-    month = e - 1 - 12 * int(e / 14)
-    year = c - 4715 - int((7 + month) / 10)
+    if days < 1.0:
+        year = year - 1
+        leapyrs = int((year - 1900 - 1) / 4)
+        days = (jd - 2415019.5) - ((year - 1900) * 365.0 + leapyrs)
 
-    # Calculate Hour, Minute and Second
-    remain, hour = np.modf((day - np.floor(day)) * 24)
-    remain, minute = np.modf(remain * 60)
-    second = remain * 60
+    # Determine if leap year
+    if ((year % 4) == 0 and ((year % 100) != 0 or (year % 400) == 0)):
+        lmonth = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366]
+    else:
+        lmonth = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
+
+    dayofyr = int(days)
+
+    # Find month
+    month = 1
+    for i in range(1, 13):
+        if dayofyr > lmonth[i]:
+            month = i + 1
+
+    day = dayofyr - lmonth[month - 1]
+
+    # Calculate time
+    tau = (days - dayofyr) * 24.0
+    hour = int(tau)
+    minute = int((tau - hour) * 60.0)
+    second = (tau - hour - minute / 60.0) * 3600.0
 
     return int(year), int(month), int(day), int(hour), int(minute), float(second)
 

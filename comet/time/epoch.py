@@ -1,7 +1,7 @@
 # python imports
 import numpy as np
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, UTC
 from calendar import isleap
 
 # COMET imports
@@ -119,6 +119,54 @@ class Epoch:
         """
         return Epoch(self.year, self.month, self.day, self.hour, self.minute, self.second)
 
+    @classmethod
+    def now(cls):
+        """Creates an Epoch representing the current UTC time.
+
+        Returns:
+            Epoch: Current time as an Epoch.
+        """
+        dt = datetime.now(UTC)
+        return cls(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second + dt.microsecond / 1e6)
+
+    @classmethod
+    def from_datetime(cls, dt: datetime):
+        """Creates an Epoch from a Python datetime object.
+
+        Args:
+            dt (datetime): Python datetime object.
+
+        Returns:
+            Epoch: Epoch created from datetime.
+        """
+        return cls(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second + dt.microsecond / 1e6)
+
+    @classmethod
+    def from_unix(cls, unix_seconds: float):
+        """Creates an Epoch from Unix timestamp (seconds since 1970-01-01).
+
+        Args:
+            unix_seconds (float): Unix timestamp in seconds.
+
+        Returns:
+            Epoch: Epoch created from Unix timestamp.
+        """
+        jd = unix_to_jd(unix_seconds)
+        return cls(jd)
+
+    @classmethod
+    def from_mjd(cls, mjd: float):
+        """Creates an Epoch from Modified Julian Date.
+
+        Args:
+            mjd (float): Modified Julian Date.
+
+        Returns:
+            Epoch: Epoch created from MJD.
+        """
+        jd = mjd_to_jd(mjd)
+        return cls(jd)
+
     def julian_date(self, timesystem: TimeSystem | str = TimeSystem.UTC):
         """Returns the Julian Date in the specified TimeSystem.
 
@@ -216,9 +264,29 @@ class Epoch:
             day_of_year (int): Day of Year.
         """
         if isleap(self.year):
-            return np.cumsum(c.DAYS_PER_MONTH_LEAP[: (self.month - 1)]) + self.day
+            if self.month == 1:
+                return self.day
+            return int(np.sum(c.DAYS_PER_MONTH_LEAP[1:self.month]) + self.day)
         else:
-            return np.cumsum(c.DAYS_PER_MONTH[: (self.month - 1)]) + self.day
+            if self.month == 1:
+                return self.day
+            return int(np.sum(c.DAYS_PER_MONTH[1:self.month]) + self.day)
+
+    def week_of_year(self):
+        """Returns the ISO week number (1-53).
+
+        Returns:
+            week (int): ISO week number.
+        """
+        return self.datetime().isocalendar()[1]
+
+    def isoformat(self):
+        """Returns ISO 8601 formatted string.
+
+        Returns:
+            iso_string (str): ISO 8601 formatted time string (YYYY-MM-DDTHH:MM:SS.sssZ).
+        """
+        return f"{self.year:04d}-{self.month:02d}-{self.day:02d}T{self.hour:02d}:{self.minute:02d}:{self.second:06.3f}Z"
 
     def julian_centuries(self, timesystem: TimeSystem | str = TimeSystem.UTC):
         """Returns the Number of Julian Centuries since J2000 in the specified TimeSystem.
@@ -353,6 +421,10 @@ class Epoch:
 
         # Compare Epochs
         return self._jd >= other._jd
+
+    def __hash__(self):
+        """Make Epoch hashable for use in sets and as dictionary keys."""
+        return hash(self._jd)
 
     def __iadd__(self, duration):
         """Override += operator for adding Durations to Epochs."""

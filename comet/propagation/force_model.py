@@ -194,7 +194,7 @@ class ForceModel:
 
         # Compare Force Models
         if isinstance(other, ForceModel):
-            return np.all(self._dict__ == other.__dict__)
+            return self.__dict__ == other.__dict__
 
     def __ne__(self, other) -> bool:
         """Override Non-Equality operator."""
@@ -204,7 +204,7 @@ class ForceModel:
 
         # Compare Force Models
         if isinstance(other, ForceModel):
-            return np.all(self._dict__ != other.__dict__)
+            return self.__dict__ != other.__dict__
 
     def __str__(self):
         """String Representation of ForceModel Class"""

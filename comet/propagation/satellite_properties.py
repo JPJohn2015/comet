@@ -68,7 +68,7 @@ class SatelliteProperties:
         Returns:
             area_to_mass (float): satellite Area-to-Mass Ratio in km^2/kg.
         """
-        return (self.area * (10e-6)) / (self.dry_mass + self.wet_mass)
+        return (self.area * 1e-6) / (self.dry_mass + self.wet_mass)
 
     def get_dry_mass(self) -> float:
         """Returns the satellite Dry Mass.
@@ -219,7 +219,7 @@ class SatelliteProperties:
 
         # Compare SatelliteProperties
         if isinstance(other, SatelliteProperties):
-            return np.all(self._dict__ == other.__dict__)
+            return self.__dict__ == other.__dict__
 
     def __ne__(self, other) -> bool:
         """Override Non-Equality operator."""
@@ -229,7 +229,7 @@ class SatelliteProperties:
 
         # Compare SatelliteProperties
         if isinstance(other, SatelliteProperties):
-            return np.all(self._dict__ != other.__dict__)
+            return self.__dict__ != other.__dict__
 
     def __str__(self):
         """String Representation of SatelliteProperties Class"""
@@ -237,8 +237,8 @@ class SatelliteProperties:
         class_string += f"Dry Mass={self.dry_mass} | "
         class_string += f"Wet Mass={self.wet_mass} | "
         class_string += f"Area={self.area} | "
-        class_string += f"Cd={self.Cr} | "
-        class_string += f"Cr={self.Cd} | "
+        class_string += f"Cd={self.Cd} | "
+        class_string += f"Cr={self.Cr} | "
 
         return class_string
 

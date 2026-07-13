@@ -10,14 +10,12 @@ from enum import Enum
 class AtmosphereModel(Enum):
     """Enum for which Atmospheric Drag Model to use.
 
-    AtmosphereModel options are: NONE, EXPONENTIAL, COESA62, COESA76, JACCHIA
+    AtmosphereModel options are: NONE, EXPONENTIAL, COESA76
     """
 
     # Status Enums
     EXPONENTIAL = 0
-    COESA62 = 1
-    COESA76 = 2
-    JACCHIA = 3
+    COESA76 = 1
 
 
 class NBodyModel(Enum):
@@ -53,4 +51,3 @@ class GravityPotentialModel(Enum):
     # Status Enums
     J2 = 0
     J2andJ3 = 1
-    EGM08 = 2

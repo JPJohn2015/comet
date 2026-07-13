@@ -206,7 +206,8 @@ class TLE:
         Returns:
             ta (float): TLE True Anomaly in rad.
         """
-        return mean_to_true_anomaly(self.mean_anomaly(), self.eccentricity())
+        result = mean_to_true_anomaly(self.mean_anomaly(), self.eccentricity())
+        return float(np.asarray(result).item())
 
     def eccentric_anomaly(self) -> float:
         """Returns the TLE Eccentric Anomaly in rad.
@@ -214,7 +215,8 @@ class TLE:
         Returns:
             ea (float): TLE Eccentric Anomaly in rad.
         """
-        return mean_to_eccentric_anomaly(self.mean_anomaly(), self.eccentricity())
+        result = mean_to_eccentric_anomaly(self.mean_anomaly(), self.eccentricity())
+        return float(np.asarray(result).item())
 
     def mean_motion(self) -> float:
         """Returns the TLE Mean Motion in rad/s.

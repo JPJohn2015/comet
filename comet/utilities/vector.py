@@ -1,7 +1,6 @@
 # python imports
 import numpy as np
 import numpy.typing as npt
-import warnings
 
 
 def unit(vector: npt.ArrayLike, axis: int = -1) -> npt.ArrayLike:
@@ -19,7 +18,7 @@ def unit(vector: npt.ArrayLike, axis: int = -1) -> npt.ArrayLike:
     magnitude = np.linalg.norm(vector, axis=axis, keepdims=True)
 
     # Handle zero-magnitude vectors to avoid division by zero
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         unit_vec = np.divide(vector, magnitude)
         # Replace NaN/Inf with zeros (occurs when magnitude is zero)
         unit_vec = np.where(np.isfinite(unit_vec), unit_vec, 0.0)
@@ -103,7 +102,7 @@ def projection(vec1: npt.ArrayLike, vec2: npt.ArrayLike, axis: int = -1) -> npt.
     vec2_mag_sq = dot(vec2, vec2, axis=axis)
 
     # Avoid division by zero for zero-magnitude vec2
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         scalar = np.divide(dot_product, vec2_mag_sq)
         scalar = np.where(np.isfinite(scalar), scalar, 0.0)
 

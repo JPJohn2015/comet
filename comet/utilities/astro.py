@@ -74,7 +74,9 @@ def eccentric_to_mean_anomaly(eccentric: npt.ArrayLike, ecc: npt.ArrayLike) -> n
     return eccentric - ecc * np.sin(eccentric)
 
 
-def mean_to_eccentric_anomaly(mean: npt.ArrayLike, ecc: npt.ArrayLike, max_iter: int = 100, tol: float = 1e-14) -> npt.ArrayLike:
+def mean_to_eccentric_anomaly(
+    mean: npt.ArrayLike, ecc: npt.ArrayLike, max_iter: int = 100, tol: float = 1e-14
+) -> npt.ArrayLike:
     """Calculates the Eccentric Anomaly from the Mean Anomaly using Newton-Raphson.
 
     Solves Kepler's equation: M = E - e*sin(E) for elliptical orbits (e < 1).
@@ -100,7 +102,9 @@ def mean_to_eccentric_anomaly(mean: npt.ArrayLike, ecc: npt.ArrayLike, max_iter:
 
     # Check eccentricity range
     if np.any(ecc >= 1.0):
-        raise ValueError("Eccentricity must be < 1 for elliptical orbits. Use hyperbolic formulas for e >= 1.")
+        raise ValueError(
+            "Eccentricity must be < 1 for elliptical orbits. Use hyperbolic formulas for e >= 1."
+        )
 
     # Initial guess (Vallado pg. 65)
     # For e < 0.8, use M as initial guess; otherwise use π
@@ -144,7 +148,7 @@ def true_to_eccentric_anomaly(true: npt.ArrayLike, ecc: npt.ArrayLike) -> npt.Ar
     E = np.arctan2(sin_E, cos_E)
 
     # Ensure result is in [0, 2π]
-    return np.where(E < 0, E + 2*np.pi, E)
+    return np.where(E < 0, E + 2 * np.pi, E)
 
 
 def eccentric_to_true_anomaly(eccentric: npt.ArrayLike, ecc: npt.ArrayLike) -> npt.ArrayLike:
@@ -169,7 +173,7 @@ def eccentric_to_true_anomaly(eccentric: npt.ArrayLike, ecc: npt.ArrayLike) -> n
     nu = np.arctan2(sin_nu, cos_nu)
 
     # Ensure result is in [0, 2π]
-    return np.where(nu < 0, nu + 2*np.pi, nu)
+    return np.where(nu < 0, nu + 2 * np.pi, nu)
 
 
 def true_to_mean_anomaly(true: npt.ArrayLike, ecc: npt.ArrayLike) -> npt.ArrayLike:
@@ -200,7 +204,9 @@ def mean_to_true_anomaly(mean: npt.ArrayLike, ecc: npt.ArrayLike) -> npt.ArrayLi
     return eccentric_to_true_anomaly(eccentric, ecc)
 
 
-def time_to_perigee(true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.ArrayLike) -> npt.ArrayLike:
+def time_to_perigee(
+    true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.ArrayLike
+) -> npt.ArrayLike:
     """Calculates the time to arrival at Perigee.
 
     Supports vectorized inputs (broadcasts over arrays).
@@ -225,7 +231,9 @@ def time_to_perigee(true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.Ar
     return delta_mean / mean_motion
 
 
-def time_since_perigee(true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.ArrayLike) -> npt.ArrayLike:
+def time_since_perigee(
+    true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.ArrayLike
+) -> npt.ArrayLike:
     """Calculates the time since passing Perigee.
 
     Supports vectorized inputs (broadcasts over arrays).
@@ -245,7 +253,9 @@ def time_since_perigee(true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt
     return mean_anomaly / mean_motion
 
 
-def time_to_apogee(true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.ArrayLike) -> npt.ArrayLike:
+def time_to_apogee(
+    true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.ArrayLike
+) -> npt.ArrayLike:
     """Calculates the time to arrival at Apogee.
 
     Supports vectorized inputs (broadcasts over arrays).
@@ -270,7 +280,9 @@ def time_to_apogee(true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.Arr
     return delta_mean / mean_motion
 
 
-def time_since_apogee(true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.ArrayLike) -> npt.ArrayLike:
+def time_since_apogee(
+    true_anomaly: npt.ArrayLike, sma: npt.ArrayLike, ecc: npt.ArrayLike
+) -> npt.ArrayLike:
     """Calculates the time since passing Apogee.
 
     Supports vectorized inputs (broadcasts over arrays).

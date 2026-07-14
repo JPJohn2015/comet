@@ -83,5 +83,8 @@ Thumbs.db
 secrets.json
 
 # Claude
-claude.md
 .claude
+
+# .md
+*.md
+!README.md

@@ -60,12 +60,19 @@ def rot_ecef_to_eci(epoch: Epoch):
 def eci_to_ecef(epoch: npt.ArrayLike, state: npt.ArrayLike):
     """Calculates the Transformed state vector from ECI to ECEF for the specified Epochs.
 
+    Implements IAU 2000 reduction: GCRS (ECI) to ITRS (ECEF) transformation.
+    Transformation chain: R_ECEF = R_pm × R_era × R_pn × R_ECI
+
+    Reference:
+        IERS Conventions (2010), Chapter 5
+        Vallado, "Fundamentals of Astrodynamics and Applications", 4th ed., Section 3.7
+
     Args:
         epoch (npt.ArrayLike): Epoch or Array of Epochs.
-        state (npt.ArrayLike): Nx6 Array of ECI states.
+        state (npt.ArrayLike): Nx6 Array of ECI states in km and km/s.
 
     Returns:
-        ecef (npt.ArrayLike): Nx6 Array of ECEF states.
+        ecef (npt.ArrayLike): Nx6 Array of ECEF states in km and km/s.
     """
     # Check dimensions of state and epoch
     state = np.atleast_2d(state)
@@ -93,8 +100,10 @@ def eci_to_ecef(epoch: npt.ArrayLike, state: npt.ArrayLike):
     # Transform velocities if present
     if state.shape[1] == 6:
         vel_eci = state[:, 3:6]
-        # Subtract Earth rotation effect (omega x pos_intermediate) in ECI frame before rotating
-        omega_cross_pos = np.cross([0, 0, c.OMEGA_EARTH], pos_temp)
+        # Account for Earth rotation velocity: V_ECEF = R × (V_ECI - ω × R_ECI)
+        # where ω = [0, 0, OMEGA_EARTH] is Earth's angular velocity in ECI
+        # Reference: IERS Conventions (2010), Section 5.4.4
+        omega_cross_pos = np.cross([0, 0, c.OMEGA_EARTH], pos_eci)
         vel_adjusted = vel_eci - omega_cross_pos
         # Apply full rotation chain
         vel_temp = np.einsum("nij,nj->ni", rot_pn, vel_adjusted)
@@ -110,12 +119,19 @@ def eci_to_ecef(epoch: npt.ArrayLike, state: npt.ArrayLike):
 def ecef_to_eci(epoch: npt.ArrayLike, state: npt.ArrayLike):
     """Calculates the Transformed state vector from ECEF to ECI for the specified Epochs.
 
+    Implements IAU 2000 reduction: ITRS (ECEF) to GCRS (ECI) transformation.
+    Transformation chain: R_ECI = R_pn^T × R_era^T × R_pm^T × R_ECEF
+
+    Reference:
+        IERS Conventions (2010), Chapter 5
+        Vallado, "Fundamentals of Astrodynamics and Applications", 4th ed., Section 3.7
+
     Args:
         epoch (npt.ArrayLike): Epoch or Array of Epochs.
-        state (npt.ArrayLike): Nx6 Array of ECEF states.
+        state (npt.ArrayLike): Nx6 Array of ECEF states in km and km/s.
 
     Returns:
-        eci (npt.ArrayLike): Nx6 Array of ECI states.
+        eci (npt.ArrayLike): Nx6 Array of ECI states in km and km/s.
     """
     # Check dimensions of state and epoch
     state = np.atleast_2d(state)
@@ -143,17 +159,16 @@ def ecef_to_eci(epoch: npt.ArrayLike, state: npt.ArrayLike):
     # Transform velocities if present
     if state.shape[1] == 6:
         vel_ecef = state[:, 3:6]
-        # Rotate velocity through first two rotations
+        # Account for Earth rotation velocity: V_ECI = R^T × V_ECEF + ω × R_ECI
+        # where ω = [0, 0, OMEGA_EARTH] is Earth's angular velocity in ECI
+        # Reference: IERS Conventions (2010), Section 5.4.4
+        # Rotate velocity through full chain
         vel_temp = np.einsum("nji,nj->ni", rot_pm, vel_ecef)
         vel_temp = np.einsum("nji,nj->ni", rot_era, vel_temp)
-        # Add Earth rotation effect (omega x pos_intermediate)
-        # pos_intermediate is position after rot_pm.T @ rot_era.T (before rot_pn.T)
-        pos_intermediate = np.einsum("nji,nj->ni", rot_pm, pos_ecef)
-        pos_intermediate = np.einsum("nji,nj->ni", rot_era, pos_intermediate)
-        omega_cross_pos = np.cross([0, 0, c.OMEGA_EARTH], pos_intermediate)
-        vel_adjusted = vel_temp + omega_cross_pos
-        # Apply final rotation
-        eci_vel = np.einsum("nji,nj->ni", rot_pn, vel_adjusted)
+        vel_temp = np.einsum("nji,nj->ni", rot_pn, vel_temp)
+        # Add Earth rotation effect
+        omega_cross_pos = np.cross([0, 0, c.OMEGA_EARTH], eci_pos)
+        eci_vel = vel_temp + omega_cross_pos
         eci_state = np.hstack([eci_pos, eci_vel])
     else:
         eci_state = eci_pos
@@ -165,11 +180,17 @@ def ecef_to_eci(epoch: npt.ArrayLike, state: npt.ArrayLike):
 def ecef_to_lla(ecef_state: npt.ArrayLike):
     """Calculates the Latitude, Longitude and Altitude (LLA) from the ECEF state.
 
+    Converts Earth-Centered Earth-Fixed Cartesian coordinates to geodetic coordinates
+    using WGS-84 ellipsoid parameters.
+
+    Reference:
+        Vallado, "Fundamentals of Astrodynamics and Applications", 4th ed., Algorithm 12, pg. 172-173
+
     Args:
         ecef_state (npt.ArrayLike): Nx6 Array of ECEF State in km and km/s.
 
     Returns:
-        lla_state (npt.ArrayLike): Nx3 Array of [Latitude [rad], Longitue [rad], Altitude [km]].
+        lla_state (npt.ArrayLike): Nx3 Array of [Latitude [rad], Longitude [rad], Altitude [km]].
     """
     # Parse ECEF and convert to m
     ecef_state = np.atleast_2d(ecef_state)
@@ -199,11 +220,17 @@ def ecef_to_lla(ecef_state: npt.ArrayLike):
 
 
 def lla_to_ecef(lla_state: npt.ArrayLike, velocity: npt.ArrayLike = None):
-    """Calculates the Latitude, Longitude and Altitude (LLA) from the ECEF state.
+    """Calculates the ECEF state from Latitude, Longitude and Altitude (LLA).
+
+    Converts geodetic coordinates to Earth-Centered Earth-Fixed Cartesian coordinates
+    using WGS-84 ellipsoid parameters.
+
+    Reference:
+        Vallado, "Fundamentals of Astrodynamics and Applications", 4th ed., Algorithm 12, pg. 172-173
 
     Args:
-        lla_state (npt.ArrayLike): Nx3 Array of [Latitude [rad], Longitue [rad], Altitude [km]].
-        velocity (npt.ArrayLike, optional): Nx3 Array of ECEF velocities. Defaults to [0,0,0].
+        lla_state (npt.ArrayLike): Nx3 Array of [Latitude [rad], Longitude [rad], Altitude [km]].
+        velocity (npt.ArrayLike, optional): Nx3 Array of ECEF velocities in km/s. Defaults to [0,0,0].
 
     Returns:
         ecef_state (npt.ArrayLike): ECEF state in km and km/s.

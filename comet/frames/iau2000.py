@@ -297,7 +297,8 @@ class IERSData:
             self.load(file_path=default_path / "tab5_2d.txt", file_type="tab5_2d")
             self._is_loaded = True
 
-        # Calculate X
+        # Calculate X (Celestial Intermediate Pole coordinate)
+        # Reference: IERS Conventions (2010), Equation 5.11
         x = (
             -0.016617
             + 2004.191898 * Ttt
@@ -315,7 +316,8 @@ class IERSData:
                 * (1e-6)
             )
 
-        # Calculate Y
+        # Calculate Y (Celestial Intermediate Pole coordinate)
+        # Reference: IERS Conventions (2010), Equation 5.12
         y = (
             -0.006951
             - 0.025896 * Ttt
@@ -333,7 +335,8 @@ class IERSData:
                 * (1e-6)
             )
 
-        # Calculate s
+        # Calculate s (CIO locator)
+        # Reference: IERS Conventions (2010), Equation 5.13
         s = (
             -(x * y) / 2
             + 9.4e-5
@@ -363,6 +366,15 @@ IERS_DATA = IERSData()
 def precession_nutation(epoch: Epoch):
     """Calculates the Precession Nutation Rotation Matrix for the IAU2000 reduction.
 
+    Implements IAU 2000A precession-nutation model using IERS tabulated data for
+    X, Y, and s parameters. Computes the Celestial Intermediate Pole (CIP) position
+    and the CIO locator.
+
+    Reference:
+        IERS Conventions (2010), Chapter 5, Sections 5.4.4 and 5.5
+        Capitaine et al. (2003), "Expressions for IAU 2000 precession quantities"
+        IAU 2000 Resolution B1.6
+
     Accepts both single Epoch and array of Epochs for vectorized computation.
 
     Args:
@@ -383,7 +395,8 @@ def precession_nutation(epoch: Epoch):
         Ttt = ep.julian_centuries("TT")
         Ttt2, Ttt3, Ttt4 = Ttt**2, Ttt**3, Ttt**4
 
-        # Calculate Earth Nutation Angles
+        # Calculate Earth Nutation Angles (Delaunay arguments)
+        # Reference: IERS Conventions (2010), Section 5.7.1, Table 5.2a
         Mms = (
             485868.249036 + 1717915923.2178 * Ttt + 31.8792 * Ttt2 + 0.051635 * Ttt3 - 0.00024470 * Ttt4
         ) * c.AS2DEG
@@ -400,7 +413,8 @@ def precession_nutation(epoch: Epoch):
             450160.398036 - 6962890.5431 * Ttt + 7.4722 * Ttt2 + 0.007702 * Ttt3 - 0.00005939 * Ttt4
         ) * c.AS2DEG
 
-        # Calculate Planetary Nutation Angles
+        # Calculate Planetary Nutation Angles (mean longitudes)
+        # Reference: Simon et al. (1994), A&A 282, 663-683
         L_Me = 252.250905494 + 149472.6746358 * Ttt
         L_Ve = 181.979800852 + 58517.8156748 * Ttt
         L_Ea = 100.466448494 + 35999.3728521 * Ttt
@@ -436,6 +450,14 @@ def precession_nutation(epoch: Epoch):
 def earth_rotation(epoch: Epoch):
     """Calculates the Earth Rotation Matrix for the IAU2000 reduction.
 
+    Computes rotation based on the Earth Rotation Angle (ERA), which is the
+    angle between the Celestial Intermediate Origin (CIO) and the Terrestrial
+    Intermediate Origin (TIO).
+
+    Reference:
+        IERS Conventions (2010), Section 5.4.4, Equation 5.14
+        Capitaine et al. (2000), "Definition of the Celestial Ephemeris Origin"
+
     Accepts both single Epoch and array of Epochs for vectorized computation.
 
     Args:
@@ -457,7 +479,10 @@ def earth_rotation(epoch: Epoch):
         utc_to_ut1, _, _ = EOP_DATA.eop(ep.modified_julian_date("UTC"))
         jd_ut1 = jd_utc + utc_to_ut1 / c.DAY
 
-        # Compute Earth Rotation Angle
+        # Compute Earth Rotation Angle (ERA)
+        # Reference: IERS Conventions (2010), Equation 5.15
+        # ERA = 2π(0.7790572732640 + 1.00273781191135448 × (JD_UT1 - 2451545.0))
+        # Converted to degrees: ERA [deg] = 280.46061837504 + 360.985612288808 × (JD_UT1 - 2451545.0)
         era = 280.46061837504 + 360.985612288808 * (jd_ut1 - c.J2000)
         era = era % 360
 
@@ -469,6 +494,14 @@ def earth_rotation(epoch: Epoch):
 
 def polar_motion(epoch: Epoch):
     """Calculates the Polar Motion Rotation Matrix for the IAU2000 reduction.
+
+    Accounts for the wobble of Earth's rotation axis (polar motion) using the
+    x_p and y_p pole coordinates from Earth Orientation Parameters, plus the
+    TIO locator s' correction.
+
+    Reference:
+        IERS Conventions (2010), Section 5.4.4
+        Capitaine et al. (2000), A&A 355, 398-405
 
     Accepts both single Epoch and array of Epochs for vectorized computation.
 
@@ -489,6 +522,8 @@ def polar_motion(epoch: Epoch):
         # Get Earth Orientation Data
         _, xp, yp = EOP_DATA.eop(ep.modified_julian_date("UTC"))
         tt = ep.julian_centuries("TT")
+        # TIO locator s' (approximation valid for ~1 mas accuracy)
+        # Reference: IERS Conventions (2010), Equation 5.16
         sp = -0.000047 * tt * c.AS2RAD
 
         # Precompute trig functions

@@ -1,11 +1,24 @@
 # python imports
 import numpy as np
 from datetime import datetime
+from enum import Enum
+import hashlib
 
 # COMET imports
 from comet.utilities.constants import Constants as c
 from comet.time.duration import Duration
 from comet.time.epoch import Epoch
+
+
+class TimelineMode(Enum):
+    """Enum that defines the Timeline operation mode.
+
+    BATCH: Timeline exposes full time_deltas array for batch operations.
+    STEPPED: Timeline exposes a cursor into time_deltas for stepped iteration.
+    """
+
+    BATCH = "batch"
+    STEPPED = "stepped"
 
 
 # Module Methods
@@ -97,6 +110,18 @@ class Timeline:
         self.stop = stop
         self.step = step
 
+        # Initialize mode to BATCH
+        self._mode = TimelineMode.BATCH
+
+        # Initialize stepped-mode cursor state
+        self._index_now = 0
+        self._now = start
+        self._dt_now = 0.0
+
+        # Initialize hash for cache invalidation
+        self._hash = None
+        self._compute_and_store_hash()
+
     def update(self, start: Epoch = None, stop: Epoch = None, step: Duration = None):
         """Updates Timeline properties.
 
@@ -124,19 +149,29 @@ class Timeline:
         self.stop = stop
         self.step = step
 
-        # Update only what has been calculated before to prevent calculating unneeded properties
-        if not hasattr(self, "durations"):
-            self.get_duration_list()
-        if not hasattr(self, "epochs"):
-            self.get_epoch_list()
-        if not hasattr(self, "julian_dates"):
-            self.get_julian_date_list()
-        if not hasattr(self, "modified_julian_dates"):
-            self.get_modified_julian_date_list()
-        if not hasattr(self, "unix"):
-            self.get_unix_list()
-        if not hasattr(self, "time_deltas"):
-            self.get_time_deltas()
+        # Clear cached properties to force recalculation
+        if hasattr(self, "time_deltas"):
+            delattr(self, "time_deltas")
+        if hasattr(self, "relative_time_deltas"):
+            delattr(self, "relative_time_deltas")
+        if hasattr(self, "durations"):
+            delattr(self, "durations")
+        if hasattr(self, "epochs"):
+            delattr(self, "epochs")
+        if hasattr(self, "julian_dates"):
+            delattr(self, "julian_dates")
+        if hasattr(self, "modified_julian_dates"):
+            delattr(self, "modified_julian_dates")
+        if hasattr(self, "unix"):
+            delattr(self, "unix")
+
+        # Reset stepped cursor to start
+        self._index_now = 0
+        self._now = self.start
+        self._dt_now = 0.0
+
+        # Recompute hash to invalidate caches
+        self._compute_and_store_hash()
 
     def get_time_deltas(self) -> np.ndarray[float]:
         """Calculate time deltas for the current Timeline.
@@ -245,6 +280,113 @@ class Timeline:
 
         return self.unix
 
+    def set_mode(self, mode: TimelineMode):
+        """Set the Timeline operation mode.
+
+        Args:
+            mode (TimelineMode): The mode to set (BATCH or STEPPED).
+        """
+        if not isinstance(mode, TimelineMode):
+            raise TypeError("Timeline.set_mode(): mode must be a TimelineMode enum")
+
+        old_mode = self._mode
+        self._mode = mode
+
+        # Recompute hash if mode changed to invalidate caches
+        if old_mode != mode:
+            self._compute_and_store_hash()
+
+    def get_mode(self) -> TimelineMode:
+        """Get the current Timeline operation mode.
+
+        Returns:
+            mode (TimelineMode): The current mode (BATCH or STEPPED).
+        """
+        return self._mode
+
+    def advance(self, step_amount: int = 1):
+        """Advance the stepped-mode cursor by the specified number of steps.
+
+        Only affects STEPPED mode. Clamps index to valid range [0, n_steps-1].
+
+        Args:
+            step_amount (int, optional): Number of steps to advance. Can be negative. Defaults to 1.
+        """
+        # Get time_deltas to determine valid range
+        time_deltas = self.get_time_deltas()
+        max_index = len(time_deltas) - 1
+
+        # Update index with clamping
+        new_index = self._index_now + step_amount
+        self._index_now = max(0, min(new_index, max_index))
+
+        # Update cursor state
+        self._dt_now = time_deltas[self._index_now]
+        self._now = self.start + Duration(seconds=self._dt_now)
+
+        # Recompute hash to invalidate caches
+        self._compute_and_store_hash()
+
+    def reset(self):
+        """Reset the stepped-mode to the beginning of the timeline."""
+        self._index_now = 0
+        self._now = self.start
+        self._dt_now = 0.0
+
+        # Recompute hash to invalidate caches
+        self._compute_and_store_hash()
+
+    def now_index(self) -> int:
+        """Get the current stepped-mode cursor index.
+
+        Returns:
+            index (int): The current cursor index into time_deltas.
+        """
+        return self._index_now
+
+    def now(self) -> Epoch:
+        """Get the current stepped-mode cursor epoch.
+
+        Returns:
+            epoch (Epoch): The current cursor epoch.
+        """
+        return self._now
+
+    def now_time_delta(self) -> float:
+        """Get the current stepped-mode cursor time delta.
+
+        Returns:
+            dt (float): The current cursor time delta in seconds from start.
+        """
+        return self._dt_now
+
+    def _compute_and_store_hash(self):
+        """Compute and store a hash of the timeline state for cache invalidation.
+
+        The hash includes: start, stop, step, mode, and cursor state.
+        Assets can use this to detect timeline changes and invalidate caches.
+        """
+        # Create hash input from timeline state
+        hash_input = (
+            f"{self.start.julian_date()}"
+            f"{self.stop.julian_date()}"
+            f"{self.step.total_seconds()}"
+            f"{self._mode.value}"
+            f"{self._index_now}"
+            f"{self._dt_now}"
+        )
+
+        # Compute hash
+        self._hash = hashlib.md5(hash_input.encode()).hexdigest()
+
+    def get_hash(self) -> str:
+        """Get the current timeline hash for cache invalidation.
+
+        Returns:
+            hash (str): MD5 hash of the timeline state.
+        """
+        return self._hash
+
     def to_dict(self):
         """Method that creates a dictionary of required inputs for Timeline construction.
 
@@ -256,6 +398,9 @@ class Timeline:
             "start": self.start.to_dict(),
             "stop": self.stop.to_dict(),
             "step": self.step.to_dict(),
+            "mode": self._mode.value,
+            "index_now": self._index_now,
+            "dt_now": self._dt_now,
         }
 
     @staticmethod
@@ -277,7 +422,22 @@ class Timeline:
         stop = Epoch.from_dict(dict["stop"])
         step = Duration.from_dict(dict["step"])
 
-        return Timeline(start, stop, step)
+        # Create timeline
+        timeline = Timeline(start, stop, step)
+
+        # Restore mode and cursor state if present (for backward compatibility)
+        if "mode" in dict:
+            timeline._mode = TimelineMode(dict["mode"])
+        if "index_now" in dict:
+            timeline._index_now = dict["index_now"]
+        if "dt_now" in dict:
+            timeline._dt_now = dict["dt_now"]
+            timeline._now = start + Duration(seconds=dict["dt_now"])
+
+        # Recompute hash with restored state
+        timeline._compute_and_store_hash()
+
+        return timeline
 
 
 # Singleton Timeline Definition

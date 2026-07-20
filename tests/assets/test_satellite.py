@@ -8,8 +8,10 @@ from comet.state.elements import Elements
 from comet.state.state import State
 from comet.time.epoch import Epoch
 from comet.time.duration import Duration
-from comet.time.timeline import TIMELINE
+from comet.time.timeline import TIMELINE, TimelineMode
 from comet.propagation.propagator import Propagator, SpacePropagator
+from comet.propagation.force_model import ForceModel
+from comet.propagation.satellite_properties import SatelliteProperties
 from comet.frames.frame import StateFrame
 
 
@@ -232,3 +234,329 @@ class TestSatelliteMultipleInstances:
         radii1 = np.linalg.norm(pos1, axis=-1)
         radii2 = np.linalg.norm(pos2, axis=-1)
         assert np.all(np.abs(radii2 - radii1) > 10000)  # km
+
+
+class TestSatelliteCOEAccessors:
+    """Test Satellite classical orbital element accessors."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 1, 0, 0),
+            Duration(seconds=1800)
+        )
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.reset()
+
+    def teardown_method(self):
+        """Clean up after tests."""
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.reset()
+
+    def test_get_coe_batch_mode(self):
+        """Test get_coe returns 2D array in BATCH mode."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), np.deg2rad(30), np.deg2rad(60), np.deg2rad(90))
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        coe = sat.get_coe()
+
+        assert coe.ndim == 2
+        assert coe.shape[1] == 6
+        assert coe.shape[0] > 1  # Multiple time points
+
+    def test_get_coe_stepped_mode(self):
+        """Test get_coe returns 1D array in STEPPED mode."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), np.deg2rad(30), np.deg2rad(60), np.deg2rad(90))
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        coe = sat.get_coe()
+
+        assert coe.ndim == 1
+        assert coe.shape[0] == 6
+
+    def test_get_coe_values_reasonable(self):
+        """Test get_coe returns reasonable values."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        a = 6878.0  # km
+        e = 0.01
+        i = np.deg2rad(45)
+        raan = np.deg2rad(30)
+        omega = np.deg2rad(60)
+        nu = np.deg2rad(90)
+        elements = Elements(a, e, i, raan, omega, nu)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        coe = sat.get_coe()
+
+        # Check semi-major axis (should be close to input)
+        assert np.isclose(coe[0], a, rtol=0.01)
+        # Check eccentricity
+        assert np.isclose(coe[1], e, rtol=0.1)
+        # Check inclination
+        assert np.isclose(coe[2], i, atol=np.deg2rad(1))
+
+    def test_get_coe_no_propagator_raises(self):
+        """Test get_coe raises ValueError without propagator."""
+        sat = Satellite()
+        with pytest.raises(ValueError, match="Cannot compute COE without a propagator"):
+            sat.get_coe()
+
+    def test_get_a(self):
+        """Test get_a returns semi-major axis."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        a = 6878.0
+        elements = Elements(a, 0.01, np.deg2rad(45), 0, 0, 0)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        a_result = sat.get_a()
+
+        assert isinstance(a_result, (np.ndarray, float, np.floating))
+        assert np.isclose(a_result, a, rtol=0.01)
+
+    def test_get_e(self):
+        """Test get_e returns eccentricity."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        e = 0.05
+        elements = Elements(6878.0, e, np.deg2rad(45), 0, 0, 0)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        e_result = sat.get_e()
+
+        assert isinstance(e_result, (np.ndarray, float, np.floating))
+        assert np.isclose(e_result, e, rtol=0.1)
+
+    def test_get_i(self):
+        """Test get_i returns inclination."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        i = np.deg2rad(60)
+        elements = Elements(6878.0, 0.01, i, 0, 0, 0)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        i_result = sat.get_i()
+
+        assert isinstance(i_result, (np.ndarray, float, np.floating))
+        assert np.isclose(i_result, i, atol=np.deg2rad(1))
+
+    def test_get_raan(self):
+        """Test get_raan returns RAAN."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        raan = np.deg2rad(45)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), raan, 0, 0)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        raan_result = sat.get_raan()
+
+        assert isinstance(raan_result, (np.ndarray, float, np.floating))
+        assert np.isclose(raan_result, raan, atol=np.deg2rad(1))
+
+    def test_get_omega(self):
+        """Test get_omega returns argument of perigee."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        omega = np.deg2rad(90)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), 0, omega, 0)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        omega_result = sat.get_omega()
+
+        assert isinstance(omega_result, (np.ndarray, float, np.floating))
+        assert np.isclose(omega_result, omega, atol=np.deg2rad(5))
+
+    def test_get_nu(self):
+        """Test get_nu returns true anomaly."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        nu = np.deg2rad(120)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), 0, 0, nu)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        nu_result = sat.get_nu()
+
+        assert isinstance(nu_result, (np.ndarray, float, np.floating))
+        # True anomaly changes over time, just check it's valid
+        assert 0 <= nu_result <= 2 * np.pi
+
+    def test_individual_accessors_batch_mode(self):
+        """Test individual accessors return 1D arrays in BATCH mode."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), 0, 0, 0)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.BATCH)
+
+        a = sat.get_a()
+        e = sat.get_e()
+        i = sat.get_i()
+
+        assert a.ndim == 1
+        assert e.ndim == 1
+        assert i.ndim == 1
+        assert len(a) > 1
+
+    def test_mode_switch_invalidates_coe_cache(self):
+        """Test that mode switch forces COE recalculation."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), 0, 0, 0)
+        propagator = SpacePropagator(epoch=epoch, state=elements)
+        sat = Satellite(propagator=propagator)
+
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        coe_batch = sat.get_coe()
+        assert coe_batch.ndim == 2
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        coe_stepped = sat.get_coe()
+        assert coe_stepped.ndim == 1
+
+
+class TestSatelliteBuilders:
+    """Test Satellite builder classmethods."""
+
+    def test_create_satellite_from_elements(self):
+        """Test create_satellite builder with elements."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), 0, 0, 0)
+
+        sat = Satellite.create_satellite(epoch, elements, name="TestSat")
+
+        assert isinstance(sat, Satellite)
+        assert sat.name == "TestSat"
+        assert sat._propagator is not None
+        assert isinstance(sat._propagator, SpacePropagator)
+
+    def test_create_satellite_propagates(self):
+        """Test satellite created with builder can propagate."""
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 1, 0, 0),
+            Duration(seconds=1800)
+        )
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), 0, 0, 0)
+
+        sat = Satellite.create_satellite(epoch, elements)
+
+        state = sat.get_state(StateFrame.ECI)
+        assert state is not None
+        assert state.shape[1] == 6
+
+    def test_create_from_state(self):
+        """Test create_from_state builder with Cartesian state."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        # Simple circular orbit state
+        r = 6878.0  # km
+        v = np.sqrt(398600.4418 / r)  # circular velocity
+        state = State(
+            np.array([r, 0, 0]),
+            np.array([0, v, 0])
+        )
+
+        sat = Satellite.create_from_state(epoch, state, name="FromState")
+
+        assert isinstance(sat, Satellite)
+        assert sat.name == "FromState"
+        assert sat._propagator is not None
+
+    def test_builder_with_force_model(self):
+        """Test builder accepts force_model parameter."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), 0, 0, 0)
+        force_model = ForceModel()
+
+        sat = Satellite.create_satellite(epoch, elements, force_model=force_model)
+
+        assert isinstance(sat, Satellite)
+        assert sat._propagator is not None
+
+    def test_builder_with_sat_properties(self):
+        """Test builder accepts sat_properties parameter."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        elements = Elements(6878.0, 0.01, np.deg2rad(45), 0, 0, 0)
+        sat_props = SatelliteProperties()
+
+        sat = Satellite.create_satellite(epoch, elements, sat_properties=sat_props)
+
+        assert isinstance(sat, Satellite)
+        assert sat._propagator is not None
+
+
+class TestSatelliteCOERoundTrip:
+    """Test round-trip: elements -> satellite -> get_coe()."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 30, 0),
+            Duration(seconds=60)
+        )
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        TIMELINE.reset()
+
+    def teardown_method(self):
+        """Clean up after tests."""
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.reset()
+
+    def test_round_trip_circular_orbit(self):
+        """Test round-trip for circular orbit."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        a = 6878.0
+        e = 0.0
+        i = np.deg2rad(45)
+        raan = np.deg2rad(30)
+        omega = np.deg2rad(60)
+        nu = np.deg2rad(90)
+
+        elements = Elements(a, e, i, raan, omega, nu)
+        sat = Satellite.create_satellite(epoch, elements)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        coe = sat.get_coe()
+
+        # Check semi-major axis matches
+        assert np.isclose(coe[0], a, rtol=0.01)
+        # Check eccentricity
+        assert np.isclose(coe[1], e, atol=0.001)
+        # Check inclination
+        assert np.isclose(coe[2], i, atol=np.deg2rad(0.5))
+
+    def test_round_trip_elliptical_orbit(self):
+        """Test round-trip for elliptical orbit."""
+        epoch = Epoch(2024, 1, 1, 0, 0, 0)
+        a = 7000.0
+        e = 0.1
+        i = np.deg2rad(55)
+
+        elements = Elements(a, e, i, 0, 0, 0)
+        sat = Satellite.create_satellite(epoch, elements)
+
+        TIMELINE.set_mode(TimelineMode.STEPPED)
+        coe = sat.get_coe()
+
+        # Check semi-major axis
+        assert np.isclose(coe[0], a, rtol=0.01)
+        # Check eccentricity
+        assert np.isclose(coe[1], e, rtol=0.1)
+        # Check inclination
+        assert np.isclose(coe[2], i, atol=np.deg2rad(1))

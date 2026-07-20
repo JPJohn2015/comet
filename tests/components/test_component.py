@@ -330,14 +330,138 @@ class TestComponentModeTransparentStatePassThrough:
         assert np.allclose(batch_state[0, :], stepped_state, rtol=1e-5)
 
 
-class TestComponentAccessStub:
-    """Test Component composite access stub."""
+class TestComponentAccess:
+    """Test Component composite access (parent-access × component-access)."""
 
-    def test_get_access_raises_not_implemented(self):
-        """Test that get_access raises NotImplementedError."""
+    def test_get_access_no_parent_raises(self):
+        """Test that get_access raises ValueError when no parent."""
         comp = Component()
-        with pytest.raises(NotImplementedError, match="Phase 6"):
-            comp.get_access()
+        with pytest.raises(ValueError, match="no parent"):
+            comp.get_access(targets=None)
+
+    def test_get_access_parent_only(self):
+        """Test component access with parent constraints only."""
+        from comet.assets.satellite import Satellite
+        from comet.access.constraints import RangeConstraint
+
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create satellite with component
+        sat = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat',
+        )
+        comp = Component(name='Sensor')
+        sat.add_component(comp)
+
+        # Create target
+        target = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7500, 0.001, 0, 0, 0, 90),
+            name='Target',
+        )
+
+        # Parent constraint only
+        parent_constraint = RangeConstraint(min_value=0, max_value=2000)
+        access = comp.get_access(target, parent_constraints=parent_constraint)
+
+        # Should return boolean mask
+        assert access.shape == (6,)
+        assert np.all((access == 0.0) | (access == 1.0))
+
+    def test_get_access_composite(self):
+        """Test composite access (parent AND component)."""
+        from comet.assets.satellite import Satellite
+        from comet.access.constraints import RangeConstraint
+
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create satellite with component
+        sat = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat',
+        )
+        comp = Component(name='Sensor')
+        sat.add_component(comp)
+
+        # Create target
+        target = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7500, 0.001, 0, 0, 0, 90),
+            name='Target',
+        )
+
+        # Both parent and component constraints
+        parent_constraint = RangeConstraint(min_value=0, max_value=3000)
+        component_constraint = RangeConstraint(min_value=1000, max_value=2500)
+
+        # Get composite access
+        access = comp.get_access(
+            target,
+            parent_constraints=parent_constraint,
+            component_constraints=component_constraint
+        )
+
+        # Should AND the constraints
+        assert access.shape == (6,)
+        assert np.all((access == 0.0) | (access == 1.0))
+
+        # Get individual accesses to verify composite
+        parent_access = sat.get_access(target, constraints=parent_constraint)
+        comp_access = sat.get_access(target, constraints=component_constraint)
+
+        # Composite should equal parent AND component
+        expected = parent_access * comp_access
+        assert np.allclose(access, expected)
+
+    def test_get_access_no_constraints(self):
+        """Test component access with no constraints returns all-pass."""
+        from comet.assets.satellite import Satellite
+
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create satellite with component
+        sat = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat',
+        )
+        comp = Component(name='Sensor')
+        sat.add_component(comp)
+
+        # Create target
+        target = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7500, 0.001, 0, 0, 0, 90),
+            name='Target',
+        )
+
+        # No constraints
+        access = comp.get_access(target, parent_constraints=None, component_constraints=None)
+
+        # Should be all-pass
+        assert access.shape == (6,)
+        assert np.all(access == 1.0)
 
 
 class TestComponentGetters:

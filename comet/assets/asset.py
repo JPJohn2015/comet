@@ -325,25 +325,243 @@ class Asset:
         self._component_name_to_id.clear()
 
     # Access and Range Stubs
-    def get_access(self, *args, **kwargs):
-        """Get access to/from this asset.
+    def get_access(
+        self,
+        targets: Union['Asset', List['Asset']],
+        constraints: Optional[Union['AccessConstraint', List['AccessConstraint']]] = None
+    ) -> np.ndarray:
+        """Get access to target asset(s) subject to constraints.
+
+        Evaluates composite access from this asset to target(s) by ANDing all
+        provided constraints. Mode-aware based on timeline state.
+
+        Args:
+            targets (Asset | List[Asset]): Single target or list of targets
+            constraints (AccessConstraint | List[AccessConstraint] | None): Constraints
+                to evaluate. If None, returns all-pass (all 1.0).
+
+        Returns:
+            np.ndarray: Composite access mask (0.0 or 1.0). Shape depends on mode:
+                - BATCH, multiple: (n_targets, n_times)
+                - BATCH, single: (n_times,)
+                - STEPPED, multiple: (n_targets,)
+                - STEPPED, single: scalar float
+        """
+        from comet.access.core import evaluate_composite_access, EvalMode
+
+        # Normalize targets to list
+        if not isinstance(targets, list):
+            targets = [targets]
+            single_target = True
+        else:
+            single_target = False
+
+        # Get mode and convert to EvalMode
+        mode = self.timeline.get_mode()
+        if mode == TimelineMode.BATCH:
+            eval_mode = EvalMode.BATCH
+        else:
+            # STEPPED mode maps to CURRENT
+            eval_mode = EvalMode.CURRENT
+
+        # Handle no constraints case - return all-pass
+        if constraints is None:
+            if mode == TimelineMode.BATCH:
+                n_times = len(self.timeline.get_epoch_list())
+                n_targets = len(targets)
+                access = np.ones((1, n_targets, n_times))
+            else:
+                n_targets = len(targets)
+                access = np.ones((1, n_targets, 1))
+        else:
+            # Normalize constraints to list
+            if not isinstance(constraints, list):
+                constraints = [constraints]
+
+            # Build constraints_per_source dict (self is source 0)
+            constraints_per_source = {0: constraints}
+
+            # Evaluate composite access
+            access = evaluate_composite_access(
+                sources=[self],
+                targets=targets,
+                constraints_per_source=constraints_per_source,
+                mode=eval_mode,
+                timeline=self.timeline,
+            )
+
+        # Remove source dimension (always 1 source)
+        access = access[0, :, :]  # (K, T)
+
+        # Handle single target
+        if single_target:
+            access = access[0, :]  # (T,) or (1,)
+
+        # Handle STEPPED mode - squeeze time dimension
+        if mode != TimelineMode.BATCH:
+            access = access.squeeze()
+
+        return access
+
+    def get_access_windows(
+        self,
+        access_mask: np.ndarray,
+        target_idx: int = 0
+    ) -> List[Tuple[Epoch, Epoch]]:
+        """Extract continuous access windows from an access mask.
+
+        Identifies contiguous blocks of access and returns them as
+        (start_epoch, end_epoch) tuples.
+
+        Args:
+            access_mask (np.ndarray): Access mask from get_access(). Shape (T,) for
+                single target or (K, T) for multiple targets.
+            target_idx (int): Target index to extract if multiple targets. Defaults to 0.
+
+        Returns:
+            List[Tuple[Epoch, Epoch]]: List of (start, end) epoch pairs for each window
 
         Raises:
-            NotImplementedError: Will be implemented in Phase 6 with comet.access.
+            ValueError: If not in BATCH mode (requires timeline with multiple epochs)
         """
-        raise NotImplementedError(
-            "Asset.get_access() will be implemented in Phase 6 when comet.access module exists"
-        )
+        from comet.access.core import extract_access_windows
 
-    def get_range_to(self, *args, **kwargs):
-        """Get range to another asset.
+        # Check mode
+        if self.timeline.get_mode() != TimelineMode.BATCH:
+            raise ValueError(
+                "get_access_windows() requires BATCH mode. "
+                "Use timeline.set_mode(TimelineMode.BATCH) first."
+            )
+
+        # Ensure access_mask has shape (1, K, T) or (1, T) for extraction function
+        if access_mask.ndim == 1:
+            # Single target: (T,) -> (1, 1, T)
+            access_mask = access_mask[np.newaxis, np.newaxis, :]
+        elif access_mask.ndim == 2:
+            # Multiple targets: (K, T) -> (1, K, T)
+            access_mask = access_mask[np.newaxis, :, :]
+        else:
+            raise ValueError(f"Unexpected access_mask shape: {access_mask.shape}")
+
+        return extract_access_windows(access_mask, self.timeline, source_idx=0, target_idx=target_idx)
+
+    def get_access_windows_indices(
+        self,
+        access_mask: np.ndarray,
+        target_idx: int = 0
+    ) -> List[Tuple[int, int]]:
+        """Extract continuous access windows as timeline index ranges.
+
+        Similar to get_access_windows but returns integer indices instead of epochs.
+
+        Args:
+            access_mask (np.ndarray): Access mask from get_access(). Shape (T,) for
+                single target or (K, T) for multiple targets.
+            target_idx (int): Target index to extract if multiple targets. Defaults to 0.
+
+        Returns:
+            List[Tuple[int, int]]: List of (start_idx, end_idx) pairs for each window.
+                Indices are inclusive: [start_idx, end_idx].
 
         Raises:
-            NotImplementedError: Will be implemented in Phase 6 with comet.access.
+            ValueError: If not in BATCH mode (requires timeline with multiple epochs)
         """
-        raise NotImplementedError(
-            "Asset.get_range_to() will be implemented in Phase 6 when comet.access module exists"
-        )
+        from comet.access.core import extract_access_windows_indices
+
+        # Check mode
+        if self.timeline.get_mode() != TimelineMode.BATCH:
+            raise ValueError(
+                "get_access_windows_indices() requires BATCH mode. "
+                "Use timeline.set_mode(TimelineMode.BATCH) first."
+            )
+
+        # Ensure access_mask has shape (1, K, T) or (1, T) for extraction function
+        if access_mask.ndim == 1:
+            # Single target: (T,) -> (1, 1, T)
+            access_mask = access_mask[np.newaxis, np.newaxis, :]
+        elif access_mask.ndim == 2:
+            # Multiple targets: (K, T) -> (1, K, T)
+            access_mask = access_mask[np.newaxis, :, :]
+        else:
+            raise ValueError(f"Unexpected access_mask shape: {access_mask.shape}")
+
+        return extract_access_windows_indices(access_mask, source_idx=0, target_idx=target_idx)
+
+    def get_range_to(self, targets: Union['Asset', List['Asset']]) -> np.ndarray:
+        """Get range to target asset(s).
+
+        Mode-aware computation using timeline mode:
+        - BATCH mode: Returns (n_targets, n_times) array
+        - STEPPED/CURRENT mode: Returns (n_targets,) array
+        - Single target: First dimension is squeezed out
+
+        Args:
+            targets (Asset | List[Asset]): Single target Asset or list of target Assets
+
+        Returns:
+            np.ndarray: Range in km. Shape depends on mode and number of targets:
+                - BATCH, multiple: (n_targets, n_times)
+                - BATCH, single: (n_times,)
+                - STEPPED, multiple: (n_targets,)
+                - STEPPED, single: scalar float
+        """
+        from comet.access.functions import compute_range_km
+
+        # Normalize to list
+        if not isinstance(targets, list):
+            targets = [targets]
+            single_target = True
+        else:
+            single_target = False
+
+        # Get source position (self)
+        source_pos = self.get_position(StateFrame.ECI)  # (T, 3) in BATCH or (3,) in STEPPED
+
+        # Get mode
+        mode = self.timeline.get_mode()
+
+        # Collect target positions
+        target_positions = []
+        for target in targets:
+            target_pos = target.get_position(StateFrame.ECI)
+            target_positions.append(target_pos)
+
+        if mode == TimelineMode.BATCH:
+            # BATCH mode: positions are (T, 3)
+            # Reshape for compute_range_km: needs (N, T, 3) and (K, T, 3)
+            source_pos = source_pos[np.newaxis, :, :]  # (1, T, 3)
+
+            # Stack targets along first axis: (K, T, 3)
+            target_pos_stacked = np.stack(target_positions, axis=0)
+
+            # Compute range: returns (1, K, T)
+            ranges = compute_range_km(source_pos, target_pos_stacked)
+
+            # Remove source dimension: (K, T)
+            ranges = ranges[0, :, :]
+
+        else:
+            # STEPPED mode: positions are (3,)
+            # Reshape to (1, 1, 3) for compute_range_km
+            source_pos = source_pos[np.newaxis, np.newaxis, :]  # (1, 1, 3)
+
+            # Stack targets and add time dimension: (K, 1, 3)
+            target_pos_stacked = np.stack(target_positions, axis=0)[:, np.newaxis, :]
+
+            # Compute range: returns (1, K, 1)
+            ranges = compute_range_km(source_pos, target_pos_stacked)
+
+            # Squeeze to (K,)
+            ranges = ranges[0, :, 0]
+
+        # Handle single target case
+        if single_target:
+            if mode == TimelineMode.BATCH:
+                ranges = ranges[0, :]  # (T,)
+            else:
+                ranges = ranges[0]  # scalar
+
+        return ranges
 
     # Serialization
     def to_dict(self):
@@ -658,25 +876,82 @@ class AssetArray:
         return AssetArray(self._assets.copy())
 
     # Access and range stubs
-    def get_access(self, *args, **kwargs):
-        """Get access for all assets.
+    def get_access(
+        self,
+        targets: Union[Asset, List[Asset]],
+        constraints: Optional[Union['AccessConstraint', List['AccessConstraint']]] = None,
+        constraints_per_source: Optional[Dict[int, List['AccessConstraint']]] = None
+    ) -> np.ndarray:
+        """Get access from all assets in array to target(s).
+
+        Stacks per-asset access computations along leading axis. Supports either
+        uniform constraints for all assets or per-source constraint specification.
+
+        Args:
+            targets (Asset | List[Asset]): Single target or list of targets
+            constraints (AccessConstraint | List | None): Constraints applied to all
+                assets. Mutually exclusive with constraints_per_source.
+            constraints_per_source (Dict[int, List[AccessConstraint]] | None): Per-asset
+                constraints indexed by asset position in array. Mutually exclusive with
+                constraints.
+
+        Returns:
+            np.ndarray: Stacked access masks (0.0 or 1.0). Shape depends on mode:
+                - BATCH, multiple targets: (n_assets, n_targets, n_times)
+                - BATCH, single target: (n_assets, n_times)
+                - STEPPED, multiple targets: (n_assets, n_targets)
+                - STEPPED, single target: (n_assets,)
 
         Raises:
-            NotImplementedError: Will be implemented in Phase 6 with comet.access.
+            ValueError: If both constraints and constraints_per_source are provided.
         """
-        raise NotImplementedError(
-            "AssetArray.get_access() will be implemented in Phase 6 when comet.access module exists"
-        )
+        if constraints is not None and constraints_per_source is not None:
+            raise ValueError(
+                "Cannot specify both 'constraints' and 'constraints_per_source'. "
+                "Use 'constraints' for uniform constraints or 'constraints_per_source' "
+                "for per-asset constraints."
+            )
 
-    def get_range_to(self, *args, **kwargs):
-        """Get range to another asset/array.
+        # Collect access from each asset
+        access_results = []
+        for idx, asset in enumerate(self._assets):
+            # Determine which constraints to use
+            if constraints_per_source is not None:
+                asset_constraints = constraints_per_source.get(idx, None)
+            else:
+                asset_constraints = constraints
 
-        Raises:
-            NotImplementedError: Will be implemented in Phase 6 with comet.access.
+            # Evaluate access for this asset
+            asset_access = asset.get_access(targets, asset_constraints)
+            access_results.append(asset_access)
+
+        # Stack along leading axis
+        return np.stack(access_results, axis=0)
+
+    def get_range_to(self, targets: Union[Asset, List[Asset]]) -> np.ndarray:
+        """Get range from all assets in array to target(s).
+
+        Stacks per-asset range computations along leading axis. Mode-aware based
+        on timeline state.
+
+        Args:
+            targets (Asset | List[Asset]): Single target or list of targets
+
+        Returns:
+            np.ndarray: Stacked ranges in km. Shape depends on mode and targets:
+                - BATCH, multiple targets: (n_assets, n_targets, n_times)
+                - BATCH, single target: (n_assets, n_times)
+                - STEPPED, multiple targets: (n_assets, n_targets)
+                - STEPPED, single target: (n_assets,)
         """
-        raise NotImplementedError(
-            "AssetArray.get_range_to() will be implemented in Phase 6 when comet.access module exists"
-        )
+        # Collect ranges from each asset
+        ranges = []
+        for asset in self._assets:
+            asset_range = asset.get_range_to(targets)
+            ranges.append(asset_range)
+
+        # Stack along leading axis
+        return np.stack(ranges, axis=0)
 
     # Serialization
     def to_dict(self) -> dict:

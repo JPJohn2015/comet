@@ -187,15 +187,48 @@ class Component:
 
         return self.parent.get_velocity(frame)
 
-    def get_access(self, *args, **kwargs):
+    def get_access(
+        self,
+        targets,
+        parent_constraints=None,
+        component_constraints=None
+    ):
         """Get composite access (parent-access × component-access).
 
+        Evaluates composite access by ANDing parent geometric access with
+        component-specific constraints. This allows components (e.g., sensors)
+        to gate their parent's access with additional constraints.
+
+        Args:
+            targets: Single Asset or list of Assets
+            parent_constraints: Constraints for parent geometric access (optional)
+            component_constraints: Additional constraints specific to component (optional)
+
+        Returns:
+            np.ndarray: Composite access mask (0.0 or 1.0). Shape depends on mode:
+                - BATCH, multiple: (n_targets, n_times)
+                - BATCH, single: (n_times,)
+                - STEPPED, multiple: (n_targets,)
+                - STEPPED, single: scalar float
+
         Raises:
-            NotImplementedError: Will be implemented in Phase 6 with comet.access.
+            ValueError: If component has no parent.
         """
-        raise NotImplementedError(
-            "Component.get_access() will be implemented in Phase 6 when comet.access module exists"
-        )
+        if self.parent is None:
+            raise ValueError("Component.get_access(): Component has no parent asset")
+
+        # Get parent's geometric access
+        parent_access = self.parent.get_access(targets, parent_constraints)
+
+        # If no component constraints, return parent access
+        if component_constraints is None:
+            return parent_access
+
+        # Evaluate component constraints
+        component_access = self.parent.get_access(targets, component_constraints)
+
+        # Return composite: parent AND component
+        return parent_access * component_access
 
     def to_dict(self):
         """Serialize Component to dictionary.

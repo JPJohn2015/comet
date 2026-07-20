@@ -427,20 +427,251 @@ class TestGroundstationArray:
         assert len(copied) == 1
 
 
-class TestAssetArrayAccessStubs:
-    """Test AssetArray access and range stubs."""
+class TestAssetArrayAccess:
+    """Test AssetArray access and range methods."""
 
-    def test_get_access_raises_not_implemented(self):
-        """Test get_access raises NotImplementedError."""
-        arr = AssetArray([Asset()])
-        with pytest.raises(NotImplementedError, match="Phase 6"):
-            arr.get_access()
+    def test_get_range_to_single_target(self):
+        """Test get_range_to with single target."""
+        from comet.state.lla import LLA
 
-    def test_get_range_to_raises_not_implemented(self):
-        """Test get_range_to raises NotImplementedError."""
-        arr = AssetArray([Asset()])
-        with pytest.raises(NotImplementedError, match="Phase 6"):
-            arr.get_range_to()
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create array of satellites
+        sat1 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat1',
+        )
+        sat2 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7500, 0.001, 0, 0, 0, 90),
+            name='Sat2',
+        )
+        arr = SatelliteArray([sat1, sat2])
+
+        # Target
+        target = Groundstation.create_groundstation(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            lla=LLA(0, 0, 0),
+            name='GS',
+        )
+
+        # Get ranges
+        ranges = arr.get_range_to(target)
+
+        # Should have shape (n_assets, n_times)
+        assert ranges.shape == (2, 6)
+        assert np.all(ranges > 0)
+
+    def test_get_range_to_multiple_targets(self):
+        """Test get_range_to with multiple targets."""
+        from comet.state.lla import LLA
+
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create array of satellites
+        sat1 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat1',
+        )
+        sat2 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7500, 0.001, 0, 0, 0, 90),
+            name='Sat2',
+        )
+        arr = SatelliteArray([sat1, sat2])
+
+        # Targets
+        gs1 = Groundstation.create_groundstation(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            lla=LLA(0, 0, 0),
+            name='GS1',
+        )
+        gs2 = Groundstation.create_groundstation(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            lla=LLA(45, 0, 0),
+            name='GS2',
+        )
+
+        # Get ranges
+        ranges = arr.get_range_to([gs1, gs2])
+
+        # Should have shape (n_assets, n_targets, n_times)
+        assert ranges.shape == (2, 2, 6)
+        assert np.all(ranges > 0)
+
+    def test_get_access_uniform_constraints(self):
+        """Test get_access with uniform constraints for all assets."""
+        from comet.state.lla import LLA
+        from comet.access.constraints import RangeConstraint
+
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create array of satellites
+        sat1 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat1',
+        )
+        sat2 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7500, 0.001, 0, 0, 0, 90),
+            name='Sat2',
+        )
+        arr = SatelliteArray([sat1, sat2])
+
+        # Target
+        target = Groundstation.create_groundstation(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            lla=LLA(0, 0, 0),
+            name='GS',
+        )
+
+        # Uniform constraint
+        constraint = RangeConstraint(min_value=0, max_value=3000)
+        access = arr.get_access(target, constraints=constraint)
+
+        # Should have shape (n_assets, n_times)
+        assert access.shape == (2, 6)
+        assert np.all((access == 0.0) | (access == 1.0))
+
+    def test_get_access_per_source_constraints(self):
+        """Test get_access with different constraints per asset."""
+        from comet.state.lla import LLA
+        from comet.access.constraints import RangeConstraint
+
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create array of satellites
+        sat1 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat1',
+        )
+        sat2 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7500, 0.001, 0, 0, 0, 90),
+            name='Sat2',
+        )
+        arr = SatelliteArray([sat1, sat2])
+
+        # Target
+        target = Groundstation.create_groundstation(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            lla=LLA(0, 0, 0),
+            name='GS',
+        )
+
+        # Different constraints per source
+        constraints_per_source = {
+            0: [RangeConstraint(min_value=0, max_value=3000)],
+            1: [RangeConstraint(min_value=0, max_value=5000)],
+        }
+        access = arr.get_access(target, constraints_per_source=constraints_per_source)
+
+        # Should have shape (n_assets, n_times)
+        assert access.shape == (2, 6)
+        assert np.all((access == 0.0) | (access == 1.0))
+
+    def test_get_access_no_constraints(self):
+        """Test get_access with no constraints returns all-pass."""
+        from comet.state.lla import LLA
+
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create array of satellites
+        sat1 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat1',
+        )
+        sat2 = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7500, 0.001, 0, 0, 0, 90),
+            name='Sat2',
+        )
+        arr = SatelliteArray([sat1, sat2])
+
+        # Target
+        target = Groundstation.create_groundstation(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            lla=LLA(0, 0, 0),
+            name='GS',
+        )
+
+        # No constraints
+        access = arr.get_access(target, constraints=None)
+
+        # Should be all-pass
+        assert access.shape == (2, 6)
+        assert np.all(access == 1.0)
+
+    def test_get_access_mutual_exclusion(self):
+        """Test that constraints and constraints_per_source are mutually exclusive."""
+        from comet.state.lla import LLA
+        from comet.access.constraints import RangeConstraint
+
+        # Set up timeline
+        TIMELINE.set_mode(TimelineMode.BATCH)
+        TIMELINE.update(
+            Epoch(2024, 1, 1, 0, 0, 0),
+            Epoch(2024, 1, 1, 0, 10, 0),
+            Duration(minutes=2),
+        )
+
+        # Create array
+        sat = Satellite.create_satellite(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            elements=Elements(7000, 0.001, 0, 0, 0, 0),
+            name='Sat',
+        )
+        arr = SatelliteArray([sat])
+
+        # Target
+        target = Groundstation.create_groundstation(
+            epoch=Epoch(2024, 1, 1, 0, 0, 0),
+            lla=LLA(0, 0, 0),
+            name='GS',
+        )
+
+        # Try to use both - should raise
+        with pytest.raises(ValueError, match="Cannot specify both"):
+            arr.get_access(
+                target,
+                constraints=[RangeConstraint(max_value=3000)],
+                constraints_per_source={0: [RangeConstraint(max_value=5000)]}
+            )
 
 
 class TestAssetArraySerialization:

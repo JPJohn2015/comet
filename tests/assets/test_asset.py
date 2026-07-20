@@ -556,22 +556,6 @@ class TestAssetComponentManagement:
         assert comp2.parent is None
 
 
-class TestAssetAccessRangeStubs:
-    """Test Asset access and range stub methods."""
-
-    def test_get_access_raises_not_implemented(self):
-        """Test that get_access raises NotImplementedError."""
-        asset = Asset()
-        with pytest.raises(NotImplementedError, match="Phase 6"):
-            asset.get_access()
-
-    def test_get_range_to_raises_not_implemented(self):
-        """Test that get_range_to raises NotImplementedError."""
-        asset = Asset()
-        with pytest.raises(NotImplementedError, match="Phase 6"):
-            asset.get_range_to()
-
-
 class TestAssetSerialization:
     """Test Asset serialization (to_dict/from_dict)."""
 

@@ -36,6 +36,22 @@ class Integrator(Enum):
     VODE = "vode"
 
 
+class PropagatorCategory(Enum):
+    """Enum for propagator categories.
+
+    Categories:
+        SPACE: Space-based propagators (SpacePropagator, TLEPropagator)
+        GROUND: Ground-based propagators (GroundPropagator)
+        CELESTIAL: Celestial body propagators (SunPropagator, MoonPropagator)
+        GENERIC: Generic base propagator
+    """
+
+    SPACE = "space"
+    GROUND = "ground"
+    CELESTIAL = "celestial"
+    GENERIC = "generic"
+
+
 class Propagator:
     """Parent Class that Propagates States.
 
@@ -70,6 +86,9 @@ class Propagator:
         self.rel_tol = rel_tol
         self.min_step = min_step
         self.max_step = max_step
+
+        # Initialize maneuvers list
+        self.maneuvers = []
 
     def copy(self):
         """Returns a copy of the Propagator.
@@ -466,7 +485,7 @@ class SpacePropagator(Propagator):
 
         # No maneuvers in propagation window, integrate as normal
         if not maneuvers:
-            state = self.__section_integrate(self.state, self.epoch, relative_time_deltas)
+            state = self._section_integrate(self.state, self.epoch, relative_time_deltas)
 
             return state
 
@@ -724,8 +743,10 @@ class GroundPropagator(Propagator):
         max_step: float = 60.0,
     ):
 
-        # Get Ground state
-        ground_state = State(state.eci_position(epoch))
+        # Get Ground state (position only, add zero velocity for stationary ground station)
+        ground_position = state.eci_position(epoch)
+        ground_velocity = np.zeros(3)
+        ground_state = State(ground_position, ground_velocity)
 
         # Initialize Parent Class
         super().__init__(
@@ -795,8 +816,17 @@ class GroundPropagator(Propagator):
             state (np.ndarray): Nx6 State Array.
         """
         # Build list of epochs to calculate ECI position of the LLA coordinates
-        epoch_list = [self.epoch + Duration(seconds=dt) for dt in relative_time_deltas]
-        state = self.lla.eci_position(epoch_list)
+        epoch_list = [self.epoch + Duration(seconds=dt) for dt in np.cumsum(relative_time_deltas)]
+        positions = self.lla.eci_position(epoch_list)
+
+        # Ground stations are stationary, so velocity is zero
+        # Ensure positions is 2D (n_time, 3)
+        positions = np.atleast_2d(positions)
+        n_points = positions.shape[0]
+        velocities = np.zeros((n_points, 3))
+
+        # Concatenate position and velocity to form Nx6 state array
+        state = np.hstack([positions, velocities])
 
         return state
 
@@ -920,7 +950,7 @@ class SunPropagator(Propagator):
             state (np.ndarray): Nx6 State Array.
         """
         # Build list of epochs to calculate ECI position of the Sun
-        jd_list = np.array([self.epoch.julian_date() + dt / c.DAY for dt in relative_time_deltas])
+        jd_list = np.array([self.epoch.julian_date() + dt / c.DAY for dt in np.cumsum(relative_time_deltas)])
         state = self.state._sun_position_low_fidelity(self.state, jd_list)
         return state
 
@@ -1029,8 +1059,8 @@ class MoonPropagator(Propagator):
         Returns:
             state (np.ndarray): Nx6 State Array.
         """
-        # Build list of epochs to calculate ECI position of the Sun
-        jd_list = np.array([self.epoch.julian_date() + dt / c.DAY for dt in relative_time_deltas])
+        # Build list of epochs to calculate ECI position of the Moon
+        jd_list = np.array([self.epoch.julian_date() + dt / c.DAY for dt in np.cumsum(relative_time_deltas)])
         state = self.state._moon_position_low_fidelity(self.state, jd_list)
         return state
 

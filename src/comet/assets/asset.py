@@ -6,10 +6,10 @@ from typing import Dict, List, Optional, Union
 
 # COMET imports
 from comet.utilities.constants import Constants as c
-from comet.state.state import State
-from comet.state.elements import Elements
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
+from comet.state import State
+from comet.state import Elements
+from comet.time import Epoch
+from comet.time import Duration
 from comet.propagation.propagator import (
     Propagator,
     PropagatorCategory,
@@ -21,9 +21,9 @@ from comet.propagation.propagator import (
 )
 from comet.propagation.force_model import ForceModel
 from comet.propagation.satellite_properties import SatelliteProperties
-from comet.time.timeline import TIMELINE, TimelineMode
+from comet.time import TIMELINE, TimelineMode
 from comet.frames.transformations import eci_to_ecef, ecef_to_lla
-from comet.frames.frame import StateFrame
+from comet.frames import StateFrame
 
 
 class Asset:
@@ -610,7 +610,7 @@ class Asset:
 
         # Reconstruct components if present
         if "components" in d and d["components"]:
-            from comet.components.component import Component
+            from comet.components import Component
 
             for comp_dict in d["components"]:
                 comp = Component.from_dict(comp_dict)
@@ -976,8 +976,8 @@ class AssetArray:
             AssetArray: Reconstructed array.
         """
         # Import here to avoid circular imports
-        from comet.assets.satellite import Satellite
-        from comet.assets.groundstation import Groundstation
+        from comet.assets import Satellite
+        from comet.assets import Groundstation
 
         # Reconstruct assets
         assets = []
@@ -993,11 +993,11 @@ class AssetArray:
         # Construct appropriate array type
         array_type = d.get("type", "AssetArray")
         if array_type == "SatelliteArray":
-            from comet.assets.satellite import SatelliteArray
+            from comet.assets import SatelliteArray
 
             return SatelliteArray(assets)
         elif array_type == "GroundstationArray":
-            from comet.assets.groundstation import GroundstationArray
+            from comet.assets import GroundstationArray
 
             return GroundstationArray(assets)
         else:
@@ -1017,18 +1017,18 @@ def _narrowest_common_array(assets: List[Asset]) -> AssetArray:
         return AssetArray([])
 
     # Import here to avoid circular imports
-    from comet.assets.satellite import Satellite
-    from comet.assets.groundstation import Groundstation
+    from comet.assets import Satellite
+    from comet.assets import Groundstation
 
     # Check if all are Satellites
     if all(isinstance(asset, Satellite) for asset in assets):
-        from comet.assets.satellite import SatelliteArray
+        from comet.assets import SatelliteArray
 
         return SatelliteArray(assets)
 
     # Check if all are Groundstations
     if all(isinstance(asset, Groundstation) for asset in assets):
-        from comet.assets.groundstation import GroundstationArray
+        from comet.assets import GroundstationArray
 
         return GroundstationArray(assets)
 

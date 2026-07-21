@@ -12,10 +12,10 @@ from comet.propagation.perturbation_model import (
     GravityPotentialModel,
 )
 from comet.propagation.satellite_properties import SatelliteProperties
-from comet.state.state import State
-from comet.state.elements import Elements
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
+from comet.state import State
+from comet.state import Elements
+from comet.time import Epoch
+from comet.time import Duration
 from comet.utilities.constants import Constants as c
 
 

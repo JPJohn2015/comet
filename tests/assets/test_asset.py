@@ -14,20 +14,20 @@ import pytest
 import numpy as np
 
 # COMET imports
-from comet.assets.asset import Asset
-from comet.components.component import Component
-from comet.state.elements import Elements
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
-from comet.time.timeline import TIMELINE, TimelineMode
+from comet.assets import Asset
+from comet.components import Component
+from comet.state import Elements
+from comet.time import Epoch
+from comet.time import Duration
+from comet.time import TIMELINE, TimelineMode
 from comet.propagation.propagator import (
     Propagator,
     PropagatorCategory,
     SpacePropagator,
     GroundPropagator,
 )
-from comet.state.lla import LLA
-from comet.frames.frame import StateFrame
+from comet.state import LLA
+from comet.frames import StateFrame
 
 
 class TestAssetConstruction:

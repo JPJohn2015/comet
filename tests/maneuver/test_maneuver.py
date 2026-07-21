@@ -3,11 +3,11 @@ import pytest
 import numpy as np
 
 # COMET imports
-from comet.maneuver.maneuver import Maneuver, ImpulsiveManeuver, FiniteManeuver
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
-from comet.frames.frame import ManeuverFrame
-from comet.components.thruster import Thruster
+from comet.maneuver import Maneuver, ImpulsiveManeuver, FiniteManeuver
+from comet.time import Epoch
+from comet.time import Duration
+from comet.frames import ManeuverFrame
+from comet.components import Thruster
 
 
 class TestManeuverConstruction:

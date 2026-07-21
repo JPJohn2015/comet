@@ -3,11 +3,11 @@ import pytest
 import numpy as np
 
 # comet imports
-from comet.celestial.sun import Sun
-from comet.celestial.celestial_fidelity import CelestialFidelity
-from comet.time.epoch import Epoch
-from comet.time.timeline import Timeline
-from comet.time.duration import Duration
+from comet.celestial import Sun
+from comet.celestial import CelestialFidelity
+from comet.time import Epoch
+from comet.time import Timeline
+from comet.time import Duration
 from comet.utilities.constants import Constants as c
 
 
@@ -310,7 +310,7 @@ class TestSunIntegration:
 
     def test_sun_moon_distance_comparison(self):
         """Test that Sun is much farther than Moon (sanity check)."""
-        from comet.celestial.moon import Moon
+        from comet.celestial import Moon
 
         sun = Sun()
         moon = Moon()

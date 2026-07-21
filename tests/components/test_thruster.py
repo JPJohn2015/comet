@@ -3,9 +3,9 @@ import pytest
 import numpy as np
 
 # COMET imports
-from comet.components.thruster import Thruster
-from comet.components.component import Component
-from comet.time.duration import Duration
+from comet.components import Thruster
+from comet.components import Component
+from comet.time import Duration
 from comet.utilities.constants import Constants as c
 
 

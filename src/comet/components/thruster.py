@@ -3,8 +3,8 @@ import numpy as np
 
 # COMET imports
 from comet.utilities.constants import Constants as c
-from comet.components.component import Component
-from comet.time.duration import Duration
+from comet.components import Component
+from comet.time import Duration
 
 
 class Thruster(Component):

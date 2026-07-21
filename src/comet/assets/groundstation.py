@@ -4,12 +4,12 @@ import numpy as np
 from typing import Dict, List, Optional, Union
 
 # COMET imports
-from comet.assets.asset import Asset, AssetArray
-from comet.state.lla import LLA
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
+from comet.assets import Asset, AssetArray
+from comet.state import LLA
+from comet.time import Epoch
+from comet.time import Duration
 from comet.propagation.propagator import Propagator, GroundPropagator
-from comet.time.timeline import TIMELINE
+from comet.time import TIMELINE
 
 
 class Groundstation(Asset):
@@ -69,8 +69,8 @@ class Groundstation(Asset):
         Raises:
             ValueError: If ground station has no propagator.
         """
-        from comet.frames.frame import StateFrame
-        from comet.time.timeline import TimelineMode
+        from comet.frames import StateFrame
+        from comet.time import TimelineMode
 
         if self._propagator is None:
             raise ValueError("Groundstation.get_lla(): Cannot get LLA without a propagator")
@@ -190,7 +190,7 @@ class Groundstation(Asset):
 
         # Reconstruct components if present
         if "components" in d and d["components"]:
-            from comet.components.component import Component
+            from comet.components import Component
 
             for comp_dict in d["components"]:
                 comp = Component.from_dict(comp_dict)
@@ -215,7 +215,7 @@ class GroundstationArray(AssetArray):
             TypeError: If any element is not a Groundstation instance.
         """
         # Import here to avoid circular imports
-        from comet.assets.groundstation import Groundstation
+        from comet.assets import Groundstation
 
         # Validate all elements are Groundstations
         for i, asset in enumerate(assets):

@@ -16,10 +16,10 @@ import pytest
 import numpy as np
 
 # comet imports
-from comet.state.tle import TLE
-from comet.state.state import State
-from comet.state.elements import Elements
-from comet.time.epoch import Epoch
+from comet.state import TLE
+from comet.state import State
+from comet.state import Elements
+from comet.time import Epoch
 
 
 # Sample TLE for ISS (International Space Station)

@@ -14,9 +14,9 @@ import pytest
 import numpy as np
 
 # comet imports
-from comet.time.timeline import Timeline, TimelineMode, get_time_deltas, get_epoch_list
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
+from comet.time import Timeline, TimelineMode, get_time_deltas, get_epoch_list
+from comet.time import Epoch
+from comet.time import Duration
 
 
 class TestTimelineConstruction:

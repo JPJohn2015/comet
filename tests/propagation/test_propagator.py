@@ -6,9 +6,9 @@ import numpy as np
 from comet.propagation.propagator import Propagator, Integrator
 from comet.propagation.force_model import ForceModel
 from comet.propagation.satellite_properties import SatelliteProperties
-from comet.state.state import State
-from comet.state.elements import Elements
-from comet.time.epoch import Epoch
+from comet.state import State
+from comet.state import Elements
+from comet.time import Epoch
 
 
 class TestIntegratorEnum:

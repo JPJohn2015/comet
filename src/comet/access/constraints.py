@@ -772,7 +772,7 @@ class EpochConstraint(AccessConstraint):
         end_epoch: End of access window (Epoch object).
 
     Example:
-        >>> from comet.time.epoch import Epoch
+        >>> from comet.time import Epoch
         >>> constraint = EpochConstraint(
         ...     start_epoch=Epoch(2024, 1, 1, 0, 0, 0),
         ...     end_epoch=Epoch(2024, 1, 1, 6, 0, 0),
@@ -834,7 +834,7 @@ class EpochWindowsConstraint(AccessConstraint):
         windows: List of (start_epoch, end_epoch) tuples.
 
     Example:
-        >>> from comet.time.epoch import Epoch
+        >>> from comet.time import Epoch
         >>> windows = [
         ...     (Epoch(2024, 1, 1, 0, 0, 0), Epoch(2024, 1, 1, 6, 0, 0)),
         ...     (Epoch(2024, 1, 1, 12, 0, 0), Epoch(2024, 1, 1, 18, 0, 0)),

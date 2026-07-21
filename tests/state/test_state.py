@@ -13,7 +13,7 @@ import pytest
 import numpy as np
 
 # comet imports
-from comet.state.state import State
+from comet.state import State
 from comet.utilities.constants import Constants as c
 
 

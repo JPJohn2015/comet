@@ -2,7 +2,7 @@
 import pytest
 
 # comet imports
-from comet.frames.frame import ManeuverFrame, StateFrame
+from comet.frames import ManeuverFrame, StateFrame
 
 
 class TestManeuverFrame:

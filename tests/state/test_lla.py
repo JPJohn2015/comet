@@ -15,8 +15,8 @@ import pytest
 import numpy as np
 
 # comet imports
-from comet.state.lla import LLA
-from comet.time.epoch import Epoch
+from comet.state import LLA
+from comet.time import Epoch
 
 
 class TestLLAConstruction:

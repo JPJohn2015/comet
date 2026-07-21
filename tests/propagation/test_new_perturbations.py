@@ -8,11 +8,11 @@ from comet.propagation.force_model import ForceModel
 from comet.propagation.satellite_properties import SatelliteProperties
 from comet.propagation.perturbation_model import AtmosphereModel, SRPModel
 from comet.propagation import dynamics
-from comet.state.state import State
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
+from comet.state import State
+from comet.time import Epoch
+from comet.time import Duration
 from comet.utilities.constants import Constants as c
-from comet.celestial.sun import Sun
+from comet.celestial import Sun
 
 
 class TestExponentialDragModel:

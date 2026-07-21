@@ -13,7 +13,7 @@ from comet.frames.transformations import (
     eci_to_lla,
     lla_to_eci,
 )
-from comet.time.epoch import Epoch
+from comet.time import Epoch
 from comet.utilities.constants import Constants as c
 
 

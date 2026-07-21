@@ -276,7 +276,7 @@ class Elements:
         Returns:
             state (State): Cartesian State.
         """
-        from comet.state.state import State
+        from comet.state import State
 
         return State(elements_to_cartesian(self._raw))
 

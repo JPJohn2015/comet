@@ -3,14 +3,14 @@ import pytest
 import numpy as np
 
 # COMET imports
-from comet.assets.groundstation import Groundstation
-from comet.state.elements import Elements
-from comet.state.lla import LLA
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
-from comet.time.timeline import TIMELINE, TimelineMode
+from comet.assets import Groundstation
+from comet.state import Elements
+from comet.state import LLA
+from comet.time import Epoch
+from comet.time import Duration
+from comet.time import TIMELINE, TimelineMode
 from comet.propagation.propagator import Propagator, GroundPropagator
-from comet.frames.frame import StateFrame
+from comet.frames import StateFrame
 
 
 class TestGroundstationConstruction:

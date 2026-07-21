@@ -4,10 +4,10 @@ from enum import Enum
 import itertools
 
 # COMET imports
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
-from comet.components.thruster import Thruster
-from comet.frames.frame import ManeuverFrame
+from comet.time import Epoch
+from comet.time import Duration
+from comet.components import Thruster
+from comet.frames import ManeuverFrame
 
 
 class Maneuver:

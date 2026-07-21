@@ -14,14 +14,14 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 # COMET imports
-from comet.components.component import Component
-from comet.assets.asset import Asset
-from comet.state.elements import Elements
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
-from comet.time.timeline import TIMELINE, TimelineMode
+from comet.components import Component
+from comet.assets import Asset
+from comet.state import Elements
+from comet.time import Epoch
+from comet.time import Duration
+from comet.time import TIMELINE, TimelineMode
 from comet.propagation.propagator import Propagator
-from comet.frames.frame import StateFrame
+from comet.frames import StateFrame
 
 
 class TestComponentConstruction:
@@ -341,7 +341,7 @@ class TestComponentAccess:
 
     def test_get_access_parent_only(self):
         """Test component access with parent constraints only."""
-        from comet.assets.satellite import Satellite
+        from comet.assets import Satellite
         from comet.access.constraints import RangeConstraint
 
         # Set up timeline
@@ -378,7 +378,7 @@ class TestComponentAccess:
 
     def test_get_access_composite(self):
         """Test composite access (parent AND component)."""
-        from comet.assets.satellite import Satellite
+        from comet.assets import Satellite
         from comet.access.constraints import RangeConstraint
 
         # Set up timeline
@@ -430,7 +430,7 @@ class TestComponentAccess:
 
     def test_get_access_no_constraints(self):
         """Test component access with no constraints returns all-pass."""
-        from comet.assets.satellite import Satellite
+        from comet.assets import Satellite
 
         # Set up timeline
         TIMELINE.set_mode(TimelineMode.BATCH)

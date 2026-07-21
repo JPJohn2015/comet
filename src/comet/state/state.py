@@ -292,7 +292,7 @@ class State:
         Returns:
             elements (Elements): Classical Orbital Elements.
         """
-        from comet.state.elements import Elements
+        from comet.state import Elements
 
         return Elements(cartesian_to_elements(self._raw))
 

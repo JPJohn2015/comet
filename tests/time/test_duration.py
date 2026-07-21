@@ -14,7 +14,7 @@ import pytest
 import numpy as np
 
 # comet imports
-from comet.time.duration import Duration
+from comet.time import Duration
 from comet.utilities.constants import Constants as c
 
 

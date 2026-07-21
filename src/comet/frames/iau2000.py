@@ -6,7 +6,7 @@ import time
 
 # comet imports
 from comet.utilities.constants import Constants as c
-from comet.time.epoch import Epoch
+from comet.time import Epoch
 from comet.utilities.rotations import rot3
 
 

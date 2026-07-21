@@ -4,8 +4,8 @@ import itertools
 from typing import Optional
 
 # COMET imports
-from comet.time.epoch import Epoch
-from comet.frames.frame import StateFrame
+from comet.time import Epoch
+from comet.frames import StateFrame
 
 
 class Component:

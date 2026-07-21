@@ -15,8 +15,8 @@ import numpy as np
 from datetime import datetime, UTC
 
 # comet imports
-from comet.time.epoch import Epoch, TimeSystem
-from comet.time.duration import Duration
+from comet.time import Epoch, TimeSystem
+from comet.time import Duration
 from comet.utilities.constants import Constants as c
 from comet.time.time_conversions import jd_to_unix
 

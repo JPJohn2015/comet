@@ -6,9 +6,9 @@ import time
 # comet imports
 from comet.propagation.propagator import Propagator
 from comet.propagation.force_model import ForceModel
-from comet.state.state import State
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
+from comet.state import State
+from comet.time import Epoch
+from comet.time import Duration
 from comet.utilities.constants import Constants as c
 
 
@@ -99,7 +99,7 @@ class TestKeplerianPropagationSpeed:
         For elliptical orbits, energy should be conserved over many orbits.
         """
         epoch = Epoch(2000, 1, 1, 12, 0, 0)
-        from comet.state.elements import Elements
+        from comet.state import Elements
 
         # Elliptical orbit: a=8000 km, e=0.3
         a = 8000.0

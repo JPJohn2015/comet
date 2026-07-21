@@ -23,9 +23,9 @@ from comet.access.core import (
     resolve_inputs,
     evaluate_composite_access,
 )
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
-from comet.time.timeline import Timeline
+from comet.time import Epoch
+from comet.time import Duration
+from comet.time import Timeline
 
 
 class TestEnums:
@@ -559,13 +559,13 @@ class TestEvaluateCompositeAccess:
 
     def setup_method(self):
         """Set up timeline and assets for tests."""
-        from comet.time.timeline import TIMELINE, TimelineMode
-        from comet.time.epoch import Epoch
-        from comet.time.duration import Duration
-        from comet.assets.satellite import Satellite
-        from comet.assets.groundstation import Groundstation
-        from comet.state.elements import Elements
-        from comet.state.lla import LLA
+        from comet.time import TIMELINE, TimelineMode
+        from comet.time import Epoch
+        from comet.time import Duration
+        from comet.assets import Satellite
+        from comet.assets import Groundstation
+        from comet.state import Elements
+        from comet.state import LLA
 
         TIMELINE.set_mode(TimelineMode.BATCH)
         TIMELINE.update(

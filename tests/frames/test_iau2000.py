@@ -16,7 +16,7 @@ from comet.frames.iau2000 import (
     read_eop_data_file,
     read_iers_data_file,
 )
-from comet.time.epoch import Epoch
+from comet.time import Epoch
 from comet.utilities.constants import Constants as c
 
 

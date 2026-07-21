@@ -48,7 +48,7 @@ from comet.access.core import (
     StateNeed,
     resolve_inputs,
 )
-from comet.time.epoch import Epoch
+from comet.time import Epoch
 from comet.utilities.constants import Constants as c
 
 
@@ -457,12 +457,12 @@ class TestConstraintIntegration:
     def test_multiple_constraints_with_batch_eval(self):
         """Test using multiple constraints together."""
         from comet.access.core import evaluate_composite_access
-        from comet.assets.satellite import Satellite
-        from comet.assets.groundstation import Groundstation
-        from comet.state.elements import Elements
-        from comet.state.lla import LLA
-        from comet.time.timeline import TIMELINE, TimelineMode
-        from comet.time.duration import Duration
+        from comet.assets import Satellite
+        from comet.assets import Groundstation
+        from comet.state import Elements
+        from comet.state import LLA
+        from comet.time import TIMELINE, TimelineMode
+        from comet.time import Duration
 
         # Set up timeline
         TIMELINE.set_mode(TimelineMode.BATCH)

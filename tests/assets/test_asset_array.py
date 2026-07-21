@@ -14,15 +14,15 @@ import pytest
 import numpy as np
 
 # COMET imports
-from comet.assets.asset import Asset, AssetArray, _narrowest_common_array
-from comet.assets.satellite import Satellite, SatelliteArray
-from comet.assets.groundstation import Groundstation, GroundstationArray
-from comet.state.elements import Elements
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
-from comet.time.timeline import TIMELINE, TimelineMode
+from comet.assets import Asset, AssetArray, _narrowest_common_array
+from comet.assets import Satellite, SatelliteArray
+from comet.assets import Groundstation, GroundstationArray
+from comet.state import Elements
+from comet.time import Epoch
+from comet.time import Duration
+from comet.time import TIMELINE, TimelineMode
 from comet.propagation.propagator import Propagator, PropagatorCategory
-from comet.frames.frame import StateFrame
+from comet.frames import StateFrame
 
 
 class TestAssetArrayConstruction:
@@ -432,7 +432,7 @@ class TestAssetArrayAccess:
 
     def test_get_range_to_single_target(self):
         """Test get_range_to with single target."""
-        from comet.state.lla import LLA
+        from comet.state import LLA
 
         # Set up timeline
         TIMELINE.set_mode(TimelineMode.BATCH)
@@ -471,7 +471,7 @@ class TestAssetArrayAccess:
 
     def test_get_range_to_multiple_targets(self):
         """Test get_range_to with multiple targets."""
-        from comet.state.lla import LLA
+        from comet.state import LLA
 
         # Set up timeline
         TIMELINE.set_mode(TimelineMode.BATCH)
@@ -515,7 +515,7 @@ class TestAssetArrayAccess:
 
     def test_get_access_uniform_constraints(self):
         """Test get_access with uniform constraints for all assets."""
-        from comet.state.lla import LLA
+        from comet.state import LLA
         from comet.access.constraints import RangeConstraint
 
         # Set up timeline
@@ -556,7 +556,7 @@ class TestAssetArrayAccess:
 
     def test_get_access_per_source_constraints(self):
         """Test get_access with different constraints per asset."""
-        from comet.state.lla import LLA
+        from comet.state import LLA
         from comet.access.constraints import RangeConstraint
 
         # Set up timeline
@@ -600,7 +600,7 @@ class TestAssetArrayAccess:
 
     def test_get_access_no_constraints(self):
         """Test get_access with no constraints returns all-pass."""
-        from comet.state.lla import LLA
+        from comet.state import LLA
 
         # Set up timeline
         TIMELINE.set_mode(TimelineMode.BATCH)
@@ -639,7 +639,7 @@ class TestAssetArrayAccess:
 
     def test_get_access_mutual_exclusion(self):
         """Test that constraints and constraints_per_source are mutually exclusive."""
-        from comet.state.lla import LLA
+        from comet.state import LLA
         from comet.access.constraints import RangeConstraint
 
         # Set up timeline

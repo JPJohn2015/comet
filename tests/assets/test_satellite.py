@@ -3,16 +3,16 @@ import pytest
 import numpy as np
 
 # COMET imports
-from comet.assets.satellite import Satellite
-from comet.state.elements import Elements
-from comet.state.state import State
-from comet.time.epoch import Epoch
-from comet.time.duration import Duration
-from comet.time.timeline import TIMELINE, TimelineMode
+from comet.assets import Satellite
+from comet.state import Elements
+from comet.state import State
+from comet.time import Epoch
+from comet.time import Duration
+from comet.time import TIMELINE, TimelineMode
 from comet.propagation.propagator import Propagator, SpacePropagator
 from comet.propagation.force_model import ForceModel
 from comet.propagation.satellite_properties import SatelliteProperties
-from comet.frames.frame import StateFrame
+from comet.frames import StateFrame
 
 
 class TestSatelliteConstruction:

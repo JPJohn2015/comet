@@ -25,9 +25,9 @@ import numpy as np
 import numpy.typing as npt
 
 # COMET imports
-from comet.time.timeline import Timeline, TimelineMode
-from comet.time.epoch import Epoch
-from comet.frames.frame import StateFrame
+from comet.time import Timeline, TimelineMode
+from comet.time import Epoch
+from comet.frames import StateFrame
 
 
 class StateNeed(Enum):

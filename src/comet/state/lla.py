@@ -3,7 +3,7 @@ import numpy as np
 import numpy.typing as npt
 
 # COMET imports
-from comet.time.epoch import Epoch
+from comet.time import Epoch
 from comet.frames.transformations import lla_to_ecef, lla_to_eci
 
 

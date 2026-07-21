@@ -2,7 +2,7 @@
 import pytest
 
 # comet imports
-from comet.celestial.celestial_fidelity import CelestialFidelity
+from comet.celestial import CelestialFidelity
 
 
 class TestCelestialFidelity:

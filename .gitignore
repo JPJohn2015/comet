@@ -26,6 +26,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Auto-generated version file
+_version.py
+
 # PyInstaller
 *.manifest
 *.spec

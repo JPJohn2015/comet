@@ -4,7 +4,6 @@ import numpy.typing as npt
 
 # comet imports
 from comet.utilities.constants import Constants as c
-from comet.state.state import State
 from comet.time.epoch import Epoch
 from comet.frames.iau2000 import polar_motion, earth_rotation, precession_nutation
 from comet.utilities.vector import unit
